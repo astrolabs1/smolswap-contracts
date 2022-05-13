@@ -1,0 +1,56 @@
+{
+  "addresses": {
+    "FakeNFT": {
+      "address": "0xa84A56e9750166596e9FEaCBe75D72161b42c5ea",
+      "etherscan": "https://rinkeby.etherscan.io/address/0xa84a56e9750166596e9feacbe75d72161b42c5ea"
+    },
+    "smol-brain": {
+      "address": "0x4feea06250d9f315a6a454c9c8a7fcbcf8701210",
+      "etherscan": "https://rinkeby.etherscan.io/address/0x4feea06250d9f315a6a454c9c8a7fcbcf8701210"
+    },
+    "treasures": {
+      "address": "0x61b468f85b2e50baa0b1729ffc99efe9ef0428f0",
+      "etherscan": "https://rinkeby.etherscan.io/address/0x61b468f85b2e50baa0b1729ffc99efe9ef0428f0#writeContract"
+    },
+    "NFTERC1155": {
+      "address": "0x4308414cd5B57787da85ee61C55EBdd8e7DFd363",
+      "etherscan": "https://rinkeby.etherscan.io/address/0x4308414cd5b57787da85ee61c55ebdd8e7dfd363"
+    },
+    "TestMagic": {
+      "address": "0xFeB1d87c47733730b8a879c240423F1B670a4eF0",
+      "etherscan": "https://rinkeby.etherscan.io/address/0xfeb1d87c47733730b8a879c240423f1b670a4ef0"
+    },
+    "TreasureNFTOracle": {
+      "address": "0x282a0622F00833eEd2Ce133C084F0c31840f2c01",
+      "etherscan": "https://rinkeby.etherscan.io/address/0x282a0622F00833eEd2Ce133C084F0c31840f2c01"
+    },
+    "TreasureMarketplace": {
+      "address": "0x7A0d90242A0b87BC4DB8850476cFDaE778C2c389",
+      "etherscan": "https://rinkeby.etherscan.io/address/0x7A0d90242A0b87BC4DB8850476cFDaE778C2c389"
+    },
+    "owner": {
+      "address": "0x2b8cF14b90Cee5f75CB0D5f255Dbd295ee47e320",
+      "etherscan": "https://rinkeby.etherscan.io/address/0x2b8cF14b90Cee5f75CB0D5f255Dbd295ee47e320"
+    },
+    "uniswapRouterv2": {
+      "address": "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
+      "etherscan": "https://rinkeby.etherscan.io/address/0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
+    },
+    "sushiswapRouterv2": {
+      "address": "0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506",
+      "etherscan": "https://rinkeby.etherscan.io/address/0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506"
+    },
+    "WETH": {
+      "address": "0xc778417E063141139Fce010982780140Aa0cD5Ab",
+      "etherscan": "https://rinkeby.etherscan.io/address/0xc778417E063141139Fce010982780140Aa0cD5Ab"
+    },
+    "rMagic": {
+      "address": "0xFd25767f710966F8a557b236a3CaeF8F92Eb7C10",
+      "etherscan": "https://rinkeby.etherscan.io/address/0xFd25767f710966F8a557b236a3CaeF8F92Eb7C10"
+    },
+    "SmolAndLand": {
+      "address": "0xd317173bdee8ac5f0a0e4d3bd6a1d810492d8530",
+      "etherscan": "https://rinkeby.etherscan.io/address/0xd317173bdee8ac5f0a0e4d3bd6a1d810492d8530"
+    }
+  }
+}

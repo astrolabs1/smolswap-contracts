@@ -1,0 +1,5 @@
+@openzeppelin/=lib/openzeppelin-contracts/
+ds-test/=lib/ds-test/src/
+@contracts/=src/contracts/
+@test/=src/tests/
+@cheatcodes/=src/cheatcodes/

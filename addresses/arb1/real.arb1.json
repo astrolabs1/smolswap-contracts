@@ -1,0 +1,22 @@
+{
+    "TreasureMarketplace": {
+        "name": "Treasure Marketplace",
+        "address": "0x2e3b85f85628301a0bce300dee3a6b04195a15ee",
+        "link": "https://arbiscan.io/address/0x2e3b85f85628301a0bce300dee3a6b04195a15ee#code"
+    },
+    "TreasureNFTOracle":{
+        "name": "Treasure NFT Oracle",
+        "address": "0xb40BC8bF5f4dF00B0b32C56E8d3Ecd802656cCe4",
+        "link": "https://arbiscan.io/address/0xb40bc8bf5f4df00b0b32c56e8d3ecd802656cce4#code"
+    },
+    "SmolBrain":{
+        "name": "Smol Brain",
+        "address": "0x6325439389E0797Ab35752B4F43a14C004f22A9c",
+        "link": "https://arbiscan.io/address/0x6325439389e0797ab35752b4f43a14c004f22a9c#code"
+    },
+    "Magic":{
+        "name": "Magic",
+        "address": "0x539bdE0d7Dbd336b79148AA742883198BBF60342",
+        "link": "https://arbiscan.io/address/0x539bdE0d7Dbd336b79148AA742883198BBF60342#code"
+    }
+}

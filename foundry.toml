@@ -1,0 +1,32 @@
+[default]
+src = 'src'
+out = 'fout' # output directory conflicts with dapptools
+libs = ['lib']
+auto_detect_solc = true
+solc_version = '0.8.11'
+remappings = [
+    '@contracts/=src/contracts/',
+    '@openzeppelin/=lib/openzeppelin-contracts/',
+    'ds-test/=lib/ds-test/src/',
+    'openzeppelin-contracts/=lib/openzeppelin-contracts/',
+]
+optimizer = false
+
+
+[build]
+src = 'src'
+out = 'bout' # output directory conflicts with dapptools
+libs = ['lib']
+auto_detect_solc = true
+solc_version = '0.8.13'
+remappings = [
+    '@contracts/=src/contracts/',
+    '@openzeppelin/=lib/openzeppelin-contracts/',
+    'ds-test/=lib/ds-test/src/',
+    'openzeppelin-contracts/=lib/openzeppelin-contracts/',
+]
+optimizer = true
+optimizer_runs = 200
+via_ir = true
+
+# See more config options https://github.com/gakonst/foundry/tree/master/config

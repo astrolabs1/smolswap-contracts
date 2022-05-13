@@ -1,0 +1,39 @@
+- input token (NOT MVP)
+	-MAGIC
+	-ETH
+	-other ERC20
+		-In the case of ETH/other ERC20 need to choose:
+			-which DEX
+			-slippage
+			-deadline
+            -refund in ETH/refund in input ERC20 tokens?
+            
+
+2 modes for usage of the contract:
+	- normal
+		-max total price (safety requirement to make sure user does not spend more than that amount) (default = the actual total price)
+		-max price per item
+
+	- sweep mode:
+		-max total price (safety requirement to make sure user does not spend more than that amount) (default = the actual total price)
+		-min spend amount (stops when spend reaches that amount) (default = the actual total price)
+		-max price per item (defaults to the actual listed price)
+		-max number of successes (defaults to the number of elements in cart)
+		-max number of failures (defaults to the number of elements in cart)
+	
+other settings:
+	- ERC1155 order: insufficient quantity listed.
+		- skip and continue (default)
+		- buy as many listed
+		- stop
+		- revert 
+    - failed order
+        - skip and continue (default)
+        - stop
+        - revert
+    - all orders failed:
+        - continue and finish (default)
+        - revert
+
+
+		

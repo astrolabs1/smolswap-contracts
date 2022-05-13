@@ -1,0 +1,10 @@
+export DAPP_REMAPPINGS=$(cat remappings.txt)
+export DAPP_SOLC_VERSION=0.8.11
+
+export DAPP_SRC=src/
+export DAPP_LIB=lib/
+
+export DAPP_LINK_TEST_LIBRARIES=0
+
+DAPP_BUILD_OPTIMIZE=1
+DAPP_BUILD_OPTIMIZE_RUNS=200
