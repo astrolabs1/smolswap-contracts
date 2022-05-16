@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.11;
+pragma solidity ^0.8.11;
 
-import '@openzeppelin/contracts/access/Ownable.sol';
-import '@openzeppelin/contracts/interfaces/IERC165.sol';
-import '@openzeppelin/contracts/token/ERC1155/IERC1155.sol';
-import '@openzeppelin/contracts/token/ERC721/IERC721.sol';
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/interfaces/IERC165.sol";
+import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-import './TreasureNFTOracle.sol';
+import "./TreasureNFTOracle.sol";
 
 contract TreasureMarketplace is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -31,7 +31,8 @@ contract TreasureMarketplace is Ownable, ReentrancyGuard {
     }
 
     //  _nftAddress => _tokenId => _owner
-    mapping(address => mapping(uint256 => mapping(address => Listing))) public listings;
+    mapping(address => mapping(uint256 => mapping(address => Listing)))
+        public listings;
     mapping(address => bool) public nftWhitelist;
 
     event UpdateFee(uint256 fee);
@@ -100,13 +101,21 @@ contract TreasureMarketplace is Ownable, ReentrancyGuard {
         if (IERC165(_nftAddress).supportsInterface(INTERFACE_ID_ERC721)) {
             IERC721 nft = IERC721(_nftAddress);
             require(nft.ownerOf(_tokenId) == _owner, "not owning item");
-        } else if (IERC165(_nftAddress).supportsInterface(INTERFACE_ID_ERC1155)) {
+        } else if (
+            IERC165(_nftAddress).supportsInterface(INTERFACE_ID_ERC1155)
+        ) {
             IERC1155 nft = IERC1155(_nftAddress);
-            require(nft.balanceOf(_owner, _tokenId) >= listedItem.quantity, "not owning item");
+            require(
+                nft.balanceOf(_owner, _tokenId) >= listedItem.quantity,
+                "not owning item"
+            );
         } else {
             revert("invalid nft address");
         }
-        require(listedItem.expirationTime >= block.timestamp, "listing expired");
+        require(
+            listedItem.expirationTime >= block.timestamp,
+            "listing expired"
+        );
         _;
     }
 
@@ -115,7 +124,12 @@ contract TreasureMarketplace is Ownable, ReentrancyGuard {
         _;
     }
 
-    constructor(uint256 _fee, address _feeRecipient, address _oracle, address _paymentToken) {
+    constructor(
+        uint256 _fee,
+        address _feeRecipient,
+        address _oracle,
+        address _paymentToken
+    ) {
         setFee(_fee);
         setFeeRecipient(_feeRecipient);
         setOracle(_oracle);
@@ -128,7 +142,11 @@ contract TreasureMarketplace is Ownable, ReentrancyGuard {
         uint256 _quantity,
         uint256 _pricePerItem,
         uint256 _expirationTime
-    ) external notListed(_nftAddress, _tokenId, _msgSender()) onlyWhitelisted(_nftAddress) {
+    )
+        external
+        notListed(_nftAddress, _tokenId, _msgSender())
+        onlyWhitelisted(_nftAddress)
+    {
         if (_expirationTime == 0) _expirationTime = type(uint256).max;
         require(_expirationTime > block.timestamp, "invalid expiration time");
         require(_quantity > 0, "nothing to list");
@@ -136,11 +154,22 @@ contract TreasureMarketplace is Ownable, ReentrancyGuard {
         if (IERC165(_nftAddress).supportsInterface(INTERFACE_ID_ERC721)) {
             IERC721 nft = IERC721(_nftAddress);
             require(nft.ownerOf(_tokenId) == _msgSender(), "not owning item");
-            require(nft.isApprovedForAll(_msgSender(), address(this)), "item not approved");
-        } else if (IERC165(_nftAddress).supportsInterface(INTERFACE_ID_ERC1155)) {
+            require(
+                nft.isApprovedForAll(_msgSender(), address(this)),
+                "item not approved"
+            );
+        } else if (
+            IERC165(_nftAddress).supportsInterface(INTERFACE_ID_ERC1155)
+        ) {
             IERC1155 nft = IERC1155(_nftAddress);
-            require(nft.balanceOf(_msgSender(), _tokenId) >= _quantity, "must hold enough nfts");
-            require(nft.isApprovedForAll(_msgSender(), address(this)), "item not approved");
+            require(
+                nft.balanceOf(_msgSender(), _tokenId) >= _quantity,
+                "must hold enough nfts"
+            );
+            require(
+                nft.isApprovedForAll(_msgSender(), address(this)),
+                "item not approved"
+            );
         } else {
             revert("invalid nft address");
         }
@@ -168,15 +197,25 @@ contract TreasureMarketplace is Ownable, ReentrancyGuard {
         uint256 _newPricePerItem,
         uint256 _newExpirationTime
     ) external nonReentrant isListed(_nftAddress, _tokenId, _msgSender()) {
-        require(_newExpirationTime > block.timestamp, "invalid expiration time");
+        require(
+            _newExpirationTime > block.timestamp,
+            "invalid expiration time"
+        );
 
-        Listing storage listedItem = listings[_nftAddress][_tokenId][_msgSender()];
+        Listing storage listedItem = listings[_nftAddress][_tokenId][
+            _msgSender()
+        ];
         if (IERC165(_nftAddress).supportsInterface(INTERFACE_ID_ERC721)) {
             IERC721 nft = IERC721(_nftAddress);
             require(nft.ownerOf(_tokenId) == _msgSender(), "not owning item");
-        } else if (IERC165(_nftAddress).supportsInterface(INTERFACE_ID_ERC1155)) {
+        } else if (
+            IERC165(_nftAddress).supportsInterface(INTERFACE_ID_ERC1155)
+        ) {
             IERC1155 nft = IERC1155(_nftAddress);
-            require(nft.balanceOf(_msgSender(), _tokenId) >= _newQuantity, "must hold enough nfts");
+            require(
+                nft.balanceOf(_msgSender(), _tokenId) >= _newQuantity,
+                "must hold enough nfts"
+            );
         } else {
             revert("invalid nft address");
         }
@@ -212,9 +251,14 @@ contract TreasureMarketplace is Ownable, ReentrancyGuard {
         if (IERC165(_nftAddress).supportsInterface(INTERFACE_ID_ERC721)) {
             IERC721 nft = IERC721(_nftAddress);
             require(nft.ownerOf(_tokenId) == _owner, "not owning item");
-        } else if (IERC165(_nftAddress).supportsInterface(INTERFACE_ID_ERC1155)) {
+        } else if (
+            IERC165(_nftAddress).supportsInterface(INTERFACE_ID_ERC1155)
+        ) {
             IERC1155 nft = IERC1155(_nftAddress);
-            require(nft.balanceOf(_msgSender(), _tokenId) >= listedItem.quantity, "not owning item");
+            require(
+                nft.balanceOf(_msgSender(), _tokenId) >= listedItem.quantity,
+                "not owning item"
+            );
         } else {
             revert("invalid nft address");
         }
@@ -241,9 +285,19 @@ contract TreasureMarketplace is Ownable, ReentrancyGuard {
 
         // Transfer NFT to buyer
         if (IERC165(_nftAddress).supportsInterface(INTERFACE_ID_ERC721)) {
-            IERC721(_nftAddress).safeTransferFrom(_owner, _msgSender(), _tokenId);
+            IERC721(_nftAddress).safeTransferFrom(
+                _owner,
+                _msgSender(),
+                _tokenId
+            );
         } else {
-            IERC1155(_nftAddress).safeTransferFrom(_owner, _msgSender(), _tokenId, _quantity, bytes(""));
+            IERC1155(_nftAddress).safeTransferFrom(
+                _owner,
+                _msgSender(),
+                _tokenId,
+                _quantity,
+                bytes("")
+            );
         }
 
         if (listedItem.quantity == _quantity) {
@@ -261,7 +315,12 @@ contract TreasureMarketplace is Ownable, ReentrancyGuard {
             listedItem.pricePerItem
         );
 
-        TreasureNFTOracle(oracle).reportSale(_nftAddress, _tokenId, paymentToken, listedItem.pricePerItem);
+        TreasureNFTOracle(oracle).reportSale(
+            _nftAddress,
+            _tokenId,
+            paymentToken,
+            listedItem.pricePerItem
+        );
         _buyItem(listedItem.pricePerItem, _quantity, _owner);
     }
 
@@ -271,9 +330,17 @@ contract TreasureMarketplace is Ownable, ReentrancyGuard {
         address _owner
     ) internal {
         uint256 totalPrice = _pricePerItem * _quantity;
-        uint256 feeAmount = totalPrice * fee / BASIS_POINTS;
-        IERC20(paymentToken).safeTransferFrom(_msgSender(), feeReceipient, feeAmount);
-        IERC20(paymentToken).safeTransferFrom(_msgSender(), _owner, totalPrice - feeAmount);
+        uint256 feeAmount = (totalPrice * fee) / BASIS_POINTS;
+        IERC20(paymentToken).safeTransferFrom(
+            _msgSender(),
+            feeReceipient,
+            feeAmount
+        );
+        IERC20(paymentToken).safeTransferFrom(
+            _msgSender(),
+            _owner,
+            totalPrice - feeAmount
+        );
     }
 
     // admin
@@ -309,7 +376,11 @@ contract TreasureMarketplace is Ownable, ReentrancyGuard {
         emit NftWhitelistAdd(_nft);
     }
 
-    function removeFromWhitelist(address _nft) external onlyOwner onlyWhitelisted(_nft) {
+    function removeFromWhitelist(address _nft)
+        external
+        onlyOwner
+        onlyWhitelisted(_nft)
+    {
         nftWhitelist[_nft] = false;
         emit NftWhitelistRemove(_nft);
     }

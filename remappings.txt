@@ -3,3 +3,4 @@ ds-test/=lib/ds-test/src/
 @contracts/=src/contracts/
 @test/=src/tests/
 @cheatcodes/=src/cheatcodes/
+@uniswap/=node_modules/@uniswap/
