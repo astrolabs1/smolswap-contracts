@@ -1,1 +1,0 @@
-forge flatten --output src/flattened/TreasureSmolSweeper.flattened.sol /home/wenxuan27/projects/smolsweep/contracts/src/contracts/sweep/TreasureSmolSweeper.sol
