@@ -23,3 +23,6 @@ bout/*
 
 src/flattened/**/*
 
+typechain-types/**/*
+
+@openzeppelin/contracts/**/*
