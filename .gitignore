@@ -21,3 +21,5 @@ dout/*
 bout/*
 .gas-snapshot
 
+src/flattened/**/*
+
