@@ -28,3 +28,7 @@ typechain-types/**/*
 @openzeppelin/contracts/**/*
 
 src/**/*.ts
+
+.env.mainnet
+.env.testnet
+.env.rinkeby
