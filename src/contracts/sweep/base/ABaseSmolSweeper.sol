@@ -72,7 +72,7 @@ abstract contract ABaseSmolSweeper is Ownable, ANFTReceiver, ERC165 {
         sweepFee = _fee;
     }
 
-    function setFee(uint256 _fee) external {
+    function setFee(uint256 _fee) external onlyOwner {
         _setFee(_fee);
     }
 
