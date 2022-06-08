@@ -6,3 +6,4 @@ ds-test/=lib/ds-test/src/
 @test/=src/tests/
 @cheatcodes/=src/cheatcodes/
 @uniswap/=node_modules/@uniswap/
+@utils/=src/utils

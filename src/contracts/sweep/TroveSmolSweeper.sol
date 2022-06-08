@@ -23,10 +23,10 @@ pragma solidity ^0.8.14;
 //         \::/    /                \::/    /                 ~~                      \::/    /        \::/    /                \::/____/                \::/    /
 //          \/____/                  \/____/                                           \/____/          \/____/                  ~~                       \/____/
 
-import "./base/ABaseTreasureSmolSweeper.sol";
+import "./base/ABaseTroveSmolSweeper.sol";
 
-contract TreasureSmolSweeper is ABaseTreasureSmolSweeper {
-    constructor(address _treasureMarketplace, address _defaultPaymentToken)
-        ABaseTreasureSmolSweeper(_treasureMarketplace, _defaultPaymentToken)
+contract TroveSmolSweeper is ABaseTroveSmolSweeper {
+    constructor(address _troveMarketplace, address _defaultPaymentToken)
+        ABaseTroveSmolSweeper(_troveMarketplace, _defaultPaymentToken)
     {}
 }

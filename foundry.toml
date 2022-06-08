@@ -5,6 +5,7 @@ libs = ['lib', "node_modules"]
 auto_detect_solc = true
 # solc_version = '0.8.14'
 remappings = [
+    '@utils/=src/utils',
     '@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/',
     'openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/',
     '@contracts/=src/contracts/',
@@ -12,11 +13,10 @@ remappings = [
     'ds-test/=lib/ds-test/src/',
     'openzeppelin-contracts/=lib/openzeppelin-contracts/',
 ]
-optimizer = false
-# optimizer = true
-# optimizer_runs = 200
-# assembly=true
-# via_ir = true
+# optimizer = false
+optimizer = true
+optimizer_runs = 1
+via_ir = true
 
 
 [build]
@@ -26,6 +26,7 @@ libs = ['lib', "node_modules"]
 auto_detect_solc = true
 # solc_version = '0.8.14'
 remappings = [
+        '@utils/=src/utils',
     '@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/',
     'openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/',
     '@contracts/=src/contracts/',
@@ -34,7 +35,7 @@ remappings = [
     'openzeppelin-contracts/=lib/openzeppelin-contracts/',
 ]
 optimizer = false
-# optimizer_runs = 10
-# via_ir = true
+optimizer_runs = 10
+via_ir = true
 
 # See more config options https://github.com/gakonst/foundry/tree/master/config

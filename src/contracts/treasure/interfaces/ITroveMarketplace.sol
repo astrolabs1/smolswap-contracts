@@ -9,7 +9,7 @@ pragma solidity ^0.8.12;
 /// @dev    This contract does not store any tokens at any time, it's only collects details "the sale" and approvals
 ///         from both parties and preforms non-custodial transaction by transfering NFT from owner to buying and payment
 ///         token from buying to NFT owner.
-interface TreasureMarketplace {
+interface ITroveMarketplace {
     struct ListingOrBid {
         /// @dev number of tokens for sale or requested (1 if ERC-721 token is active for sale) (for bids, quantity for ERC-721 can be greater than 1)
         uint64 quantity;

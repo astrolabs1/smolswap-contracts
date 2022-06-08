@@ -1,0 +1,178 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.14;
+
+//           _____                    _____                   _______                   _____            _____                    _____                    _____                    _____
+//          /\    \                  /\    \                 /::\    \                 /\    \          /\    \                  /\    \                  /\    \                  /\    \
+//         /::\    \                /::\____\               /::::\    \               /::\____\        /::\    \                /::\____\                /::\    \                /::\    \
+//        /::::\    \              /::::|   |              /::::::\    \             /:::/    /       /::::\    \              /:::/    /               /::::\    \              /::::\    \
+//       /::::::\    \            /:::::|   |             /::::::::\    \           /:::/    /       /::::::\    \            /:::/   _/___            /::::::\    \            /::::::\    \
+//      /:::/\:::\    \          /::::::|   |            /:::/~~\:::\    \         /:::/    /       /:::/\:::\    \          /:::/   /\    \          /:::/\:::\    \          /:::/\:::\    \
+//     /:::/__\:::\    \        /:::/|::|   |           /:::/    \:::\    \       /:::/    /       /:::/__\:::\    \        /:::/   /::\____\        /:::/__\:::\    \        /:::/__\:::\    \
+//     \:::\   \:::\    \      /:::/ |::|   |          /:::/    / \:::\    \     /:::/    /        \:::\   \:::\    \      /:::/   /:::/    /       /::::\   \:::\    \      /::::\   \:::\    \
+//   ___\:::\   \:::\    \    /:::/  |::|___|______   /:::/____/   \:::\____\   /:::/    /       ___\:::\   \:::\    \    /:::/   /:::/   _/___    /::::::\   \:::\    \    /::::::\   \:::\    \
+//  /\   \:::\   \:::\    \  /:::/   |::::::::\    \ |:::|    |     |:::|    | /:::/    /       /\   \:::\   \:::\    \  /:::/___/:::/   /\    \  /:::/\:::\   \:::\    \  /:::/\:::\   \:::\____\
+// /::\   \:::\   \:::\____\/:::/    |:::::::::\____\|:::|____|     |:::|    |/:::/____/       /::\   \:::\   \:::\____\|:::|   /:::/   /::\____\/:::/  \:::\   \:::\____\/:::/  \:::\   \:::|    |
+// \:::\   \:::\   \::/    /\::/    / ~~~~~/:::/    / \:::\    \   /:::/    / \:::\    \       \:::\   \:::\   \::/    /|:::|__/:::/   /:::/    /\::/    \:::\  /:::/    /\::/    \:::\  /:::|____|
+//  \:::\   \:::\   \/____/  \/____/      /:::/    /   \:::\    \ /:::/    /   \:::\    \       \:::\   \:::\   \/____/  \:::\/:::/   /:::/    /  \/____/ \:::\/:::/    /  \/_____/\:::\/:::/    /
+//   \:::\   \:::\    \                  /:::/    /     \:::\    /:::/    /     \:::\    \       \:::\   \:::\    \       \::::::/   /:::/    /            \::::::/    /            \::::::/    /
+//    \:::\   \:::\____\                /:::/    /       \:::\__/:::/    /       \:::\    \       \:::\   \:::\____\       \::::/___/:::/    /              \::::/    /              \::::/    /
+//     \:::\  /:::/    /               /:::/    /         \::::::::/    /         \:::\    \       \:::\  /:::/    /        \:::\__/:::/    /               /:::/    /                \::/____/
+//      \:::\/:::/    /               /:::/    /           \::::::/    /           \:::\    \       \:::\/:::/    /          \::::::::/    /               /:::/    /                  ~~
+//       \::::::/    /               /:::/    /             \::::/    /             \:::\    \       \::::::/    /            \::::::/    /               /:::/    /
+//        \::::/    /               /:::/    /               \::/____/               \:::\____\       \::::/    /              \::::/    /               /:::/    /
+//         \::/    /                \::/    /                 ~~                      \::/    /        \::/    /                \::/____/                \::/    /
+//          \/____/                  \/____/                                           \/____/          \/____/                  ~~                       \/____/
+
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/interfaces/IERC165.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
+import "../../token/ANFTReceiver.sol";
+import "../libraries/SettingsBitFlag.sol";
+import "../libraries/Math.sol";
+import "../../treasure/interfaces/ITroveMarketplace.sol";
+
+import "../base/ABaseTroveSmolSweeper.sol";
+import "../base/ABaseSwapper.sol";
+import "../interfaces/ITroveSmolSweepSwapper.sol";
+
+import "../libraries/ArrayUtils.sol";
+
+// abstract contract ABaseTroveSmolSweepSwapper is
+//     ITroveSmolSweepSwapper,
+//     ABaseTroveSmolSweeper,
+//     ABaseSwapper
+// {
+//     using SafeERC20 for IERC20;
+//     using SettingsBitFlag for uint16;
+//     using MemoryArrayUtilsForAddress for address[];
+
+//     constructor(
+//         address _troveMarketplace,
+//         address _defaultPaymentToken,
+//         IUniswapV2Router02[] memory _swapRouters
+//     )
+//         ABaseTroveSmolSweeper(_troveMarketplace, _defaultPaymentToken)
+//         ABaseSwapper(_swapRouters)
+//     {}
+
+//     function buyUsingOtherToken(
+//         BuyItemParams[] calldata _buyOrders,
+//         uint16 _inputSettingsBitFlag,
+//         uint256 _maxInputTokenAmount,
+//         address[] calldata _path,
+//         uint32 _routerId,
+//         uint256 _deadline
+//     ) external nonReentrant {
+//         IUniswapV2Router02 router = swapRouters[_routerId];
+//         IERC20(_path[0]).approve(address(router), _maxInputTokenAmount);
+//         uint256[] memory amountsIn = router.swapExactTokensForTokens(
+//             _maxInputTokenAmount,
+//             0,
+//             _path,
+//             address(this),
+//             _deadline
+//         );
+//         uint256 maxSpendIncFees = amountsIn[amountsIn.length - 1];
+
+//         (uint256 totalSpentAmount, uint256 successCount) = _buyItems(
+//             _buyOrders,
+//             _inputSettingsBitFlag,
+//             _calculateAmountWithoutFees(maxSpendIncFees)
+//         );
+
+//         // transfer back failed payment tokens to the buyer
+//         if (successCount == 0) revert AllReverted();
+
+//         uint256 feeAmount = _calculateFee(totalSpentAmount);
+//         uint256 refundAmount = maxSpendIncFees - (totalSpentAmount + feeAmount);
+//         if (
+//             _inputSettingsBitFlag.checkSetting(
+//                 SettingsBitFlag.REFUND_IN_INPUT_TOKEN
+//             )
+//         ) {
+//             address[] memory reversePath = _path.reverse();
+//             IERC20(defaultPaymentToken).approve(address(router), refundAmount);
+//             uint256[] memory amounts = router.swapExactTokensForTokens(
+//                 refundAmount,
+//                 0,
+//                 reversePath,
+//                 address(this),
+//                 _deadline
+//             );
+//             payable(msg.sender).transfer(amounts[amounts.length - 1]);
+//         } else {
+//             defaultPaymentToken.safeTransfer(
+//                 msg.sender,
+//                 maxSpendIncFees - (totalSpentAmount + feeAmount)
+//             );
+//         }
+//     }
+
+//     function sweepUsingOtherToken(
+//         BuyItemParams[] calldata _buyOrders,
+//         uint16 _inputSettingsBitFlag,
+//         uint32 _maxSuccesses,
+//         uint32 _maxFailures,
+//         uint256 _maxInputTokenAmount,
+//         uint256 _minSpend,
+//         address[] calldata _path,
+//         uint32 _routerId,
+//         uint256 _deadline
+//     ) external nonReentrant {
+//         IUniswapV2Router02 router = swapRouters[_routerId];
+//         uint256 maxSpendIncFees;
+//         {
+//             IERC20(_path[0]).approve(address(router), _maxInputTokenAmount);
+//             uint256[] memory amountsIn = router.swapExactTokensForTokens(
+//                 _maxInputTokenAmount,
+//                 0,
+//                 _path,
+//                 address(this),
+//                 _deadline
+//             );
+//             maxSpendIncFees = amountsIn[amountsIn.length - 1];
+//         }
+//         (uint256 totalSpentAmount, uint256 successCount) = _sweepItems(
+//             _buyOrders,
+//             _inputSettingsBitFlag,
+//             _maxSuccesses,
+//             _maxFailures,
+//             _calculateAmountWithoutFees(maxSpendIncFees),
+//             _minSpend
+//         );
+
+//         // transfer back failed payment tokens to the buyer
+//         if (successCount == 0) revert AllReverted();
+
+//         if (
+//             _inputSettingsBitFlag.checkSetting(
+//                 SettingsBitFlag.REFUND_IN_INPUT_TOKEN
+//             )
+//         ) {
+//             uint256 refundAmount = maxSpendIncFees -
+//                 (totalSpentAmount + _calculateFee(totalSpentAmount));
+//             address[] memory reversePath = _path.reverse();
+//             IERC20(defaultPaymentToken).approve(address(router), refundAmount);
+//             uint256[] memory amounts = router.swapExactTokensForTokens(
+//                 refundAmount,
+//                 0,
+//                 reversePath,
+//                 address(this),
+//                 _deadline
+//             );
+//             payable(msg.sender).transfer(amounts[amounts.length - 1]);
+//         } else {
+//             defaultPaymentToken.safeTransfer(
+//                 msg.sender,
+//                 maxSpendIncFees -
+//                     (totalSpentAmount + _calculateFee(totalSpentAmount))
+//             );
+//         }
+//     }
+// }

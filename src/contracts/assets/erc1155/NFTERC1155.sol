@@ -12,13 +12,7 @@ contract NFTERC1155 is ERC1155, Ownable, ERC1155Supply {
     uint256 public constant SWORD = 3;
     uint256 public constant SHIELD = 4;
 
-    constructor() ERC1155("https://game.example/api/item/{id}.json") {
-        // _mint(msg.sender, GOLD, 10**18, "");
-        // _mint(msg.sender, SILVER, 10**27, "");
-        // _mint(msg.sender, THORS_HAMMER, 1, "");
-        // _mint(msg.sender, SWORD, 10**9, "");
-        // _mint(msg.sender, SHIELD, 10**9, "");
-    }
+    constructor() ERC1155("https://game.example/api/item/{id}.json") {}
 
     function decimals(uint256 _id) public pure returns (uint8) {
         if (_id <= SILVER) {
