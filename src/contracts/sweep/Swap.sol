@@ -13,8 +13,6 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import "../uniswap/v2-periphery/interfaces/IUniswapV2Router02.sol";
 
-import "hardhat/console.sol";
-
 contract Swap is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 

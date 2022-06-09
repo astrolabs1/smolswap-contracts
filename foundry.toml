@@ -13,10 +13,10 @@ remappings = [
     'ds-test/=lib/ds-test/src/',
     'openzeppelin-contracts/=lib/openzeppelin-contracts/',
 ]
-# optimizer = false
-optimizer = true
-optimizer_runs = 1
-via_ir = true
+optimizer = false
+# optimizer = true
+# optimizer_runs = 1
+# via_ir = true
 
 
 [build]

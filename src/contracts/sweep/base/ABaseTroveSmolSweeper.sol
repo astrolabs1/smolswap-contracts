@@ -362,6 +362,7 @@ abstract contract ABaseTroveSmolSweeper is
             }
         }
 
+        uint256[] memory maxSpends = _maxSpendWithoutFees(_maxSpendIncFees);
         (
             uint256[] memory totalSpentAmount,
             uint256 successCount
@@ -369,7 +370,7 @@ abstract contract ABaseTroveSmolSweeper is
                 _buyOrders,
                 _inputSettingsBitFlag,
                 _inputTokenAddresses,
-                _maxSpendIncFees
+                maxSpends
             );
 
         // transfer back failed payment tokens to the buyer
@@ -397,41 +398,23 @@ abstract contract ABaseTroveSmolSweeper is
     }
 
     function _buyItemsManyTokens(
-        BuyItemParams[] calldata _buyOrders,
+        BuyItemParams[] memory _buyOrders,
         uint16 _inputSettingsBitFlag,
-        address[] calldata _inputTokenAddresses,
-        uint256[] calldata _maxSpendIncFees
+        address[] memory _inputTokenAddresses,
+        uint256[] memory _maxSpends
     )
         internal
         returns (uint256[] memory totalSpentAmounts, uint256 successCount)
     {
-        console.log("hello");
         totalSpentAmounts = new uint256[](_inputTokenAddresses.length);
-        uint256[] memory _maxSpendIncFeesAmount = new uint256[](
-            _maxSpendIncFees.length
-        );
-        console.log("hello2");
-        uint256 maxSpendLength = _maxSpendIncFees.length;
-        for (uint256 i = 0; i < maxSpendLength; ) {
-            _maxSpendIncFeesAmount[i] = _calculateAmountWithoutFees(
-                _maxSpendIncFees[i]
-            );
-            unchecked {
-                ++i;
-            }
-        }
-        console.log("hello3");
         // buy all assets
         for (uint256 i = 0; i < _buyOrders.length; ) {
-            uint256 j = 0;
-            for (; j < maxSpendLength; ) {
-                if (_inputTokenAddresses[j] == _buyOrders[i].nftAddress) {
-                    break;
-                }
-                unchecked {
-                    ++j;
-                }
-            }
+            console.log("hello", i);
+            uint256 j = _getTokenIndex(
+                _inputTokenAddresses,
+                _buyOrders[i].nftAddress
+            );
+            console.log("hell2o", i);
             (
                 uint256 spentAmount,
                 bool spentSuccess,
@@ -439,7 +422,7 @@ abstract contract ABaseTroveSmolSweeper is
             ) = tryBuyItem(
                     _buyOrders[i],
                     _inputSettingsBitFlag,
-                    _maxSpendIncFeesAmount[j] - totalSpentAmounts[j]
+                    _maxSpends[j] - totalSpentAmounts[j]
                 );
 
             if (spentSuccess) {
@@ -459,6 +442,7 @@ abstract contract ABaseTroveSmolSweeper is
                 ++i;
             }
         }
+        console.log("hello4");
     }
 
     function sweepItemsSingleToken(
@@ -530,10 +514,6 @@ abstract contract ABaseTroveSmolSweeper is
             uint256 failCount
         )
     {
-        uint256 _maxSpendIncFees = _calculateAmountWithoutFees(
-            _maxSpendIncFees
-        );
-
         // buy all assets
         for (uint256 i = 0; i < _buyOrders.length; i++) {
             if (successCount >= _maxSuccesses || failCount >= _maxFailures)
@@ -578,9 +558,7 @@ abstract contract ABaseTroveSmolSweeper is
         uint32 _maxFailures
     ) external payable {
         // transfer payment tokens to this contract
-        uint256 i = 0;
-        uint256 length = _maxSpendIncFees.length;
-        for (; i < length; ) {
+        for (uint256 i = 0; i < _maxSpendIncFees.length; ) {
             if (_inputTokenAddresses[i] == address(0)) {
                 if (_maxSpendIncFees[i] != msg.value) revert InvalidMsgValue();
             } else {
@@ -602,6 +580,10 @@ abstract contract ABaseTroveSmolSweeper is
             }
         }
 
+        uint256[] memory _maxSpendIncFeesAmount = _maxSpendWithoutFees(
+            _maxSpendIncFees
+        );
+
         (
             uint256[] memory totalSpentAmount,
             uint256 successCount,
@@ -610,7 +592,7 @@ abstract contract ABaseTroveSmolSweeper is
                 _buyOrders,
                 _inputSettingsBitFlag,
                 _inputTokenAddresses,
-                _maxSpendIncFees,
+                _maxSpendIncFeesAmount,
                 _minSpends,
                 _maxSuccesses,
                 _maxFailures
@@ -619,8 +601,7 @@ abstract contract ABaseTroveSmolSweeper is
         // transfer back failed payment tokens to the buyer
         if (successCount == 0) revert AllReverted();
 
-        i = 0;
-        for (; i < length; ) {
+        for (uint256 i = 0; i < _maxSpendIncFees.length; ) {
             uint256 feeAmount = _calculateFee(totalSpentAmount[i]);
 
             if (_inputTokenAddresses[i] == address(0)) {
@@ -644,7 +625,7 @@ abstract contract ABaseTroveSmolSweeper is
         BuyItemParams[] memory _buyOrders,
         uint16 _inputSettingsBitFlag,
         address[] memory _inputTokenAddresses,
-        uint256[] memory _maxSpendIncFees,
+        uint256[] memory _maxSpendIncFeesAmount,
         uint256[] memory _minSpends,
         uint32 _maxSuccesses,
         uint32 _maxFailures
@@ -656,47 +637,26 @@ abstract contract ABaseTroveSmolSweeper is
             uint256 failCount
         )
     {
-        uint256[] memory _maxSpendIncFeesAmount = new uint256[](
-            _maxSpendIncFees.length
-        );
+        totalSpentAmounts = new uint256[](_inputTokenAddresses.length);
 
-        uint256 maxSpendLength = _maxSpendIncFees.length;
-        for (uint256 i = 0; i < maxSpendLength; ) {
-            _maxSpendIncFeesAmount[i] = _calculateAmountWithoutFees(
-                _maxSpendIncFees[i]
-            );
-            unchecked {
-                ++i;
-            }
-        }
-
-        // buy all assets
-        // uint256 failCount = 0;
-        // i = 0;
         for (uint256 i = 0; i < _buyOrders.length; ) {
-            BuyItemParams memory buyItemParam = _buyOrders[i];
+            console.log("hello", i);
+            // BuyItemParams memory buyItemParam = _buyOrders[i];
             if (successCount >= _maxSuccesses || failCount >= _maxFailures)
                 break;
 
-            // uint256 curTotalSpentAmount;
-            uint256 j = 0;
-            for (; j < maxSpendLength; ) {
-                if (_inputTokenAddresses[j] == buyItemParam.nftAddress) {
-                    // curTotalSpentAmount = totalSpentAmounts[j];
-                    if (totalSpentAmounts[j] >= _minSpends[i]) break;
-                    break;
-                }
-                unchecked {
-                    ++j;
-                }
-            }
+            uint256 j = _getTokenIndex(
+                _inputTokenAddresses,
+                _buyOrders[i].nftAddress
+            );
+            if (totalSpentAmounts[j] >= _minSpends[i]) break;
 
             (
                 uint256 spentAmount,
                 bool spentSuccess,
                 uint16 spentError
             ) = tryBuyItem(
-                    buyItemParam,
+                    _buyOrders[i],
                     _inputSettingsBitFlag,
                     _maxSpendIncFeesAmount[j] - totalSpentAmounts[j]
                 );
@@ -719,5 +679,37 @@ abstract contract ABaseTroveSmolSweeper is
                 ++i;
             }
         }
+    }
+
+    function _maxSpendWithoutFees(uint256[] memory _maxSpendIncFees)
+        internal
+        returns (uint256[] memory maxSpendIncFeesAmount)
+    {
+        maxSpendIncFeesAmount = new uint256[](_maxSpendIncFees.length);
+
+        uint256 maxSpendLength = _maxSpendIncFees.length;
+        for (uint256 i = 0; i < maxSpendLength; ) {
+            maxSpendIncFeesAmount[i] = _calculateAmountWithoutFees(
+                _maxSpendIncFees[i]
+            );
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    function _getTokenIndex(
+        address[] memory _inputTokenAddresses,
+        address _buyOrderAddress
+    ) internal pure returns (uint256 j) {
+        for (; j < _inputTokenAddresses.length; ) {
+            if (_inputTokenAddresses[j] == _buyOrderAddress) {
+                return j;
+            }
+            unchecked {
+                ++j;
+            }
+        }
+        revert();
     }
 }
