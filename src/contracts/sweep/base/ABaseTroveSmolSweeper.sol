@@ -38,7 +38,7 @@ import "./ABaseSmolSweeper.sol";
 
 import "../structs/TokenAmount.sol";
 
-import "@utils/console.sol";
+// import "@utils/console.sol";
 
 error InvalidMsgValue();
 error MsgValueShouldBeZero();
@@ -409,12 +409,10 @@ abstract contract ABaseTroveSmolSweeper is
         totalSpentAmounts = new uint256[](_inputTokenAddresses.length);
         // buy all assets
         for (uint256 i = 0; i < _buyOrders.length; ) {
-            console.log("hello", i);
             uint256 j = _getTokenIndex(
                 _inputTokenAddresses,
-                _buyOrders[i].nftAddress
+                _buyOrders[i].paymentToken
             );
-            console.log("hell2o", i);
             (
                 uint256 spentAmount,
                 bool spentSuccess,
@@ -442,7 +440,6 @@ abstract contract ABaseTroveSmolSweeper is
                 ++i;
             }
         }
-        console.log("hello4");
     }
 
     function sweepItemsSingleToken(
@@ -640,7 +637,6 @@ abstract contract ABaseTroveSmolSweeper is
         totalSpentAmounts = new uint256[](_inputTokenAddresses.length);
 
         for (uint256 i = 0; i < _buyOrders.length; ) {
-            console.log("hello", i);
             // BuyItemParams memory buyItemParam = _buyOrders[i];
             if (successCount >= _maxSuccesses || failCount >= _maxFailures)
                 break;
@@ -700,16 +696,16 @@ abstract contract ABaseTroveSmolSweeper is
 
     function _getTokenIndex(
         address[] memory _inputTokenAddresses,
-        address _buyOrderAddress
+        address _buyOrderPaymentToken
     ) internal pure returns (uint256 j) {
         for (; j < _inputTokenAddresses.length; ) {
-            if (_inputTokenAddresses[j] == _buyOrderAddress) {
+            if (_inputTokenAddresses[j] == _buyOrderPaymentToken) {
                 return j;
             }
             unchecked {
                 ++j;
             }
         }
-        revert();
+        revert("bad");
     }
 }
