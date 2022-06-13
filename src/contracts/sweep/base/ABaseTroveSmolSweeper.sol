@@ -261,7 +261,7 @@ abstract contract ABaseTroveSmolSweeper is
         address _inputTokenAddress,
         uint256 _maxSpendIncFees
     ) external payable {
-        if (_inputTokenAddress == address(weth) && _buyOrders[0].usingEth) {
+        if (_inputTokenAddress == address(weth) && msg.value > 0) {
             if (_maxSpendIncFees != msg.value) revert InvalidMsgValue();
         } else {
             if (msg.value != 0) revert MsgValueShouldBeZero();
@@ -353,13 +353,10 @@ abstract contract ABaseTroveSmolSweeper is
         uint256 i = 0;
         uint256 length = _inputTokenAddresses.length;
         for (; i < length; ) {
-            if (
-                _inputTokenAddresses[i] == address(weth) &&
-                _buyOrders[0].usingEth
-            ) {
+            if (_inputTokenAddresses[i] == address(weth) && msg.value > 0) {
                 if (_maxSpendIncFees[i] != msg.value) revert InvalidMsgValue();
             } else {
-                if (msg.value != 0) revert MsgValueShouldBeZero();
+                // if (msg.value != 0) revert MsgValueShouldBeZero();
                 // transfer payment tokens to this contract
                 IERC20(_inputTokenAddresses[i]).safeTransferFrom(
                     msg.sender,
@@ -469,7 +466,7 @@ abstract contract ABaseTroveSmolSweeper is
         uint32 _maxSuccesses,
         uint32 _maxFailures
     ) external payable {
-        if (_inputTokenAddress == address(weth) && _buyOrders[0].usingEth) {
+        if (_inputTokenAddress == address(weth) && msg.value > 0) {
             if (_maxSpendIncFees != msg.value) revert InvalidMsgValue();
         } else {
             if (msg.value != 0) revert MsgValueShouldBeZero();
@@ -574,10 +571,7 @@ abstract contract ABaseTroveSmolSweeper is
     ) external payable {
         // transfer payment tokens to this contract
         for (uint256 i = 0; i < _maxSpendIncFees.length; ) {
-            if (
-                _inputTokenAddresses[i] == address(weth) &&
-                _buyOrders[0].usingEth
-            ) {
+            if (_inputTokenAddresses[i] == address(weth) && msg.value > 0) {
                 if (_maxSpendIncFees[i] != msg.value) revert InvalidMsgValue();
             } else {
                 if (msg.value != 0) revert MsgValueShouldBeZero();
