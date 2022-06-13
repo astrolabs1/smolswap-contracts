@@ -23,9 +23,15 @@ pragma solidity ^0.8.14;
 //         \::/    /                \::/    /                 ~~                      \::/    /        \::/    /                \::/____/                \::/    /
 //          \/____/                  \/____/                                           \/____/          \/____/                  ~~                       \/____/
 
+import "../structs/BuyOrder.sol";
 import "../../treasure/interfaces/ITroveMarketplace.sol";
 
-interface ITroveSmolSweeper {
+interface ITreasureTroveSmolSweeper {
+    enum Marketplace {
+        TREASURE,
+        TROVE
+    }
+
     event SuccessBuyItem(
         address indexed _nftAddress,
         uint256 _tokenId,
@@ -47,6 +53,7 @@ interface ITroveSmolSweeper {
 
     function buyItemsSingleToken(
         BuyItemParams[] calldata _buyOrders,
+        Marketplace[] calldata _marketplaces,
         uint16 _inputSettingsBitFlag,
         address _inputTokenAddress,
         uint256 _maxSpendIncFees
@@ -54,28 +61,31 @@ interface ITroveSmolSweeper {
 
     function buyItemsManyTokens(
         BuyItemParams[] calldata _buyOrders,
+        Marketplace[] calldata _marketplaces,
         uint16 _inputSettingsBitFlag,
         address[] calldata _inputTokenAddresses,
         uint256[] calldata _maxSpendIncFees
     ) external payable;
 
-    function sweepItemsSingleToken(
-        BuyItemParams[] calldata _buyOrders,
-        uint16 _inputSettingsBitFlag,
-        address _inputTokenAddress,
-        uint256 _maxSpendIncFees,
-        uint256 _minSpend,
-        uint32 _maxSuccesses,
-        uint32 _maxFailures
-    ) external payable;
+    // function sweepItemsSingleToken(
+    //     BuyItemParams[] calldata _buyOrders,
+    //     Marketplace[] calldata _marketplaces,
+    //     uint16 _inputSettingsBitFlag,
+    //     address _inputTokenAddress,
+    //     uint256 _maxSpendIncFees,
+    //     uint256 _minSpend,
+    //     uint32 _maxSuccesses,
+    //     uint32 _maxFailures
+    // ) external payable;
 
-    function sweepItemsManyTokens(
-        BuyItemParams[] calldata _buyOrders,
-        uint16 _inputSettingsBitFlag,
-        address[] calldata _inputTokenAddresses,
-        uint256[] calldata _maxSpendIncFees,
-        uint256[] calldata _minSpends,
-        uint32 _maxSuccesses,
-        uint32 _maxFailures
-    ) external payable;
+    // function sweepItemsManyTokens(
+    //     BuyItemParams[] calldata _buyOrders,
+    //     Marketplace[] calldata _marketplaces,
+    //     uint16 _inputSettingsBitFlag,
+    //     address[] calldata _inputTokenAddresses,
+    //     uint256[] calldata _maxSpendIncFees,
+    //     uint256[] calldata _minSpends,
+    //     uint32 _maxSuccesses,
+    //     uint32 _maxFailures
+    // ) external payable;
 }

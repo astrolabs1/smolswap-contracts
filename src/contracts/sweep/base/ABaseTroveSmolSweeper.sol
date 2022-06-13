@@ -36,7 +36,7 @@ import "../structs/BuyOrder.sol";
 import "../interfaces/ITroveSmolSweeper.sol";
 import "./ABaseSmolSweeper.sol";
 
-import "../structs/TokenAmount.sol";
+// import "../structs/TokenAmount.sol";
 
 // import "@utils/console.sol";
 
@@ -55,24 +55,24 @@ abstract contract ABaseTroveSmolSweeper is
     bytes4 private constant INTERFACE_ID_ERC1155 = 0xd9b67a26;
 
     IERC20 public defaultPaymentToken;
-    ITroveMarketplace public marketplace;
+    ITroveMarketplace public troveMarketplace;
 
     constructor(address _troveMarketplace, address _defaultPaymentToken) {
-        marketplace = ITroveMarketplace(_troveMarketplace);
+        troveMarketplace = ITroveMarketplace(_troveMarketplace);
         defaultPaymentToken = IERC20(_defaultPaymentToken);
 
-        _approveERC20TokenToContract(
-            IERC20(_defaultPaymentToken),
-            _troveMarketplace,
-            type(uint256).max
-        );
+        // _approveERC20TokenToContract(
+        //     IERC20(_defaultPaymentToken),
+        //     _troveMarketplace,
+        //     type(uint256).max
+        // );
     }
 
     function setMarketplaceContract(ITroveMarketplace _troveMarketplace)
         external
         onlyOwner
     {
-        marketplace = _troveMarketplace;
+        troveMarketplace = _troveMarketplace;
     }
 
     function setDefaultPaymentToken(IERC20 _defaultPaymentToken)
@@ -89,7 +89,7 @@ abstract contract ABaseTroveSmolSweeper is
     {
         _approveERC20TokenToContract(
             defaultPaymentToken,
-            address(marketplace),
+            address(troveMarketplace),
             type(uint256).max
         );
     }
@@ -120,7 +120,7 @@ abstract contract ABaseTroveSmolSweeper is
     {
         uint256 quantityToBuy = _buyOrder.quantity;
         // check if the listing exists
-        ITroveMarketplace.ListingOrBid memory listing = marketplace.listings(
+        ITroveMarketplace.ListingOrBid memory listing = troveMarketplace.listings(
             _buyOrder.nftAddress,
             _buyOrder.tokenId,
             _buyOrder.owner
@@ -165,12 +165,15 @@ abstract contract ABaseTroveSmolSweeper is
             _buyOrder.paymentToken != address(defaultPaymentToken)
         ) {
             IERC20(_buyOrder.paymentToken).approve(
-                address(marketplace),
+                address(troveMarketplace),
                 _buyOrder.maxPricePerItem
             );
         }
         uint256 totalSpent = 0;
-        try marketplace.buyItems(buyItemParams) {
+        uint256 value = (_buyOrder.paymentToken == address(0))
+            ? (_buyOrder.maxPricePerItem * quantityToBuy)
+            : 0;
+        try troveMarketplace.buyItems{value: value}(buyItemParams) {
             if (
                 SettingsBitFlag.checkSetting(
                     _inputSettingsBitFlag,
@@ -260,7 +263,7 @@ abstract contract ABaseTroveSmolSweeper is
                 _maxSpendIncFees
             );
             IERC20(_inputTokenAddress).approve(
-                address(marketplace),
+                address(troveMarketplace),
                 _maxSpendIncFees
             );
         }
@@ -352,7 +355,7 @@ abstract contract ABaseTroveSmolSweeper is
                     _maxSpendIncFees[i]
                 );
                 IERC20(_inputTokenAddresses[i]).approve(
-                    address(marketplace),
+                    address(troveMarketplace),
                     _maxSpendIncFees[i]
                 );
             }
@@ -462,7 +465,7 @@ abstract contract ABaseTroveSmolSweeper is
                 _maxSpendIncFees
             );
             IERC20(_inputTokenAddress).approve(
-                address(marketplace),
+                address(troveMarketplace),
                 _maxSpendIncFees
             );
         }
@@ -567,7 +570,7 @@ abstract contract ABaseTroveSmolSweeper is
                     _maxSpendIncFees[i]
                 );
                 IERC20(_inputTokenAddresses[i]).approve(
-                    address(marketplace),
+                    address(troveMarketplace),
                     _maxSpendIncFees[i]
                 );
             }

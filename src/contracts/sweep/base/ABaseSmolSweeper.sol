@@ -44,7 +44,7 @@ abstract contract ABaseSmolSweeper is Ownable, ANFTReceiver, ERC165 {
     uint256 public sweepFee = 0;
 
     function _calculateFee(uint256 _amount) internal view returns (uint256) {
-        return (_amount / FEE_BASIS_POINTS) * sweepFee;
+        return (_amount * sweepFee) / FEE_BASIS_POINTS;
     }
 
     function calculateFee(uint256 _amount) external view returns (uint256) {
@@ -56,8 +56,8 @@ abstract contract ABaseSmolSweeper is Ownable, ANFTReceiver, ERC165 {
         view
         returns (uint256)
     {
-        return
-            (_amountWithFee / (FEE_BASIS_POINTS + sweepFee)) * FEE_BASIS_POINTS;
+        return ((_amountWithFee * FEE_BASIS_POINTS) /
+            (FEE_BASIS_POINTS + sweepFee));
     }
 
     function calculateAmountAmountWithoutFees(uint256 _amountWithFee)

@@ -48,10 +48,10 @@ abstract contract ABaseTreasureSmolSweeper is
     bytes4 private constant INTERFACE_ID_ERC1155 = 0xd9b67a26;
 
     IERC20 public defaultPaymentToken;
-    ITreasureMarketplace public marketplace;
+    ITreasureMarketplace public treasureMarketplace;
 
     constructor(address _treasureMarketplace, address _defaultPaymentToken) {
-        marketplace = ITreasureMarketplace(_treasureMarketplace);
+        treasureMarketplace = ITreasureMarketplace(_treasureMarketplace);
         defaultPaymentToken = IERC20(_defaultPaymentToken);
 
         _approveERC20TokenToContract(
@@ -65,7 +65,7 @@ abstract contract ABaseTreasureSmolSweeper is
         external
         onlyOwner
     {
-        marketplace = _treasureMarketplace;
+        treasureMarketplace = _treasureMarketplace;
     }
 
     function setDefaultPaymentToken(IERC20 _defaultPaymentToken)
@@ -82,7 +82,7 @@ abstract contract ABaseTreasureSmolSweeper is
     {
         _approveERC20TokenToContract(
             defaultPaymentToken,
-            address(marketplace),
+            address(treasureMarketplace),
             type(uint256).max
         );
     }
@@ -113,7 +113,7 @@ abstract contract ABaseTreasureSmolSweeper is
     {
         uint256 quantityToBuy = _buyOrder.quantity;
         // check if the listing exists
-        ITreasureMarketplace.Listing memory listing = marketplace.listings(
+        ITreasureMarketplace.Listing memory listing = treasureMarketplace.listings(
             _buyOrder.assetAddress,
             _buyOrder.tokenId,
             _buyOrder.seller
@@ -153,7 +153,7 @@ abstract contract ABaseTreasureSmolSweeper is
 
         uint256 totalSpent = 0;
         try
-            marketplace.buyItem(
+            treasureMarketplace.buyItem(
                 _buyOrder.assetAddress,
                 _buyOrder.tokenId,
                 _buyOrder.seller,

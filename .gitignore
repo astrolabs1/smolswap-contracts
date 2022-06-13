@@ -32,3 +32,5 @@ src/**/*.ts
 .env.mainnet
 .env.testnet
 .env.rinkeby
+
+scripts/**/*

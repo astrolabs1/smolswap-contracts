@@ -23,59 +23,18 @@ pragma solidity ^0.8.14;
 //         \::/    /                \::/    /                 ~~                      \::/    /        \::/    /                \::/____/                \::/    /
 //          \/____/                  \/____/                                           \/____/          \/____/                  ~~                       \/____/
 
-import "../../treasure/interfaces/ITroveMarketplace.sol";
+import "./base/ABaseTreasureTroveSmolSweeper.sol";
 
-interface ITroveSmolSweeper {
-    event SuccessBuyItem(
-        address indexed _nftAddress,
-        uint256 _tokenId,
-        address indexed _seller,
-        address indexed _buyer,
-        uint256 _quantity,
-        uint256 _price
-    );
-
-    event CaughtFailureBuyItem(
-        address indexed _nftAddress,
-        uint256 _tokenId,
-        address indexed _seller,
-        address indexed _buyer,
-        uint256 _quantity,
-        uint256 _price,
-        bytes _errorReason
-    );
-
-    function buyItemsSingleToken(
-        BuyItemParams[] calldata _buyOrders,
-        uint16 _inputSettingsBitFlag,
-        address _inputTokenAddress,
-        uint256 _maxSpendIncFees
-    ) external payable;
-
-    function buyItemsManyTokens(
-        BuyItemParams[] calldata _buyOrders,
-        uint16 _inputSettingsBitFlag,
-        address[] calldata _inputTokenAddresses,
-        uint256[] calldata _maxSpendIncFees
-    ) external payable;
-
-    function sweepItemsSingleToken(
-        BuyItemParams[] calldata _buyOrders,
-        uint16 _inputSettingsBitFlag,
-        address _inputTokenAddress,
-        uint256 _maxSpendIncFees,
-        uint256 _minSpend,
-        uint32 _maxSuccesses,
-        uint32 _maxFailures
-    ) external payable;
-
-    function sweepItemsManyTokens(
-        BuyItemParams[] calldata _buyOrders,
-        uint16 _inputSettingsBitFlag,
-        address[] calldata _inputTokenAddresses,
-        uint256[] calldata _maxSpendIncFees,
-        uint256[] calldata _minSpends,
-        uint32 _maxSuccesses,
-        uint32 _maxFailures
-    ) external payable;
+contract TreasureTroveSmolSweeper is ABaseTreasureTroveSmolSweeper {
+    constructor(
+        address _treasureMarketplace,
+        address _troveMarketplace,
+        address _defaultPaymentToken
+    )
+        ABaseTreasureTroveSmolSweeper(
+            _treasureMarketplace,
+            _troveMarketplace,
+            _defaultPaymentToken
+        )
+    {}
 }
