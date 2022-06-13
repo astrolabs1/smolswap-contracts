@@ -13,6 +13,8 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 
 import "../interfaces/ITroveMarketplace.sol";
 
+import "@utils/console.sol";
+
 /// @title  Treasure NFT marketplace
 /// @notice This contract allows you to buy and sell NFTs from token contracts that are approved by the contract owner.
 ///         Please note that this contract is . In the event of a compromised ProxyAdmin contract owner,
@@ -246,9 +248,7 @@ contract TroveMarketplace is
     );
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        
-    }
+    constructor() {}
 
     /// @notice Perform initial contract setup
     /// @dev    The initializer modifier ensures this is only called once, the owner should confirm this was properly
@@ -414,6 +414,8 @@ contract TroveMarketplace is
         address _paymentTokenForCollection = getPaymentTokenForCollection(
             _nftAddress
         );
+
+        console.log("payment", _paymentTokenForCollection, _paymentToken);
         require(
             _paymentTokenForCollection == _paymentToken,
             "TreasureMarketplace: Wrong payment token"

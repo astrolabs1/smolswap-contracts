@@ -26,7 +26,9 @@ pragma solidity ^0.8.14;
 import "./base/ABaseTroveSmolSweeper.sol";
 
 contract TroveSmolSweeper is ABaseTroveSmolSweeper {
-    constructor(address _troveMarketplace, address _defaultPaymentToken)
-        ABaseTroveSmolSweeper(_troveMarketplace, _defaultPaymentToken)
-    {}
+    constructor(
+        address _troveMarketplace,
+        address _defaultPaymentToken,
+        address _weth
+    ) ABaseTroveSmolSweeper(_troveMarketplace, _defaultPaymentToken, _weth) {}
 }

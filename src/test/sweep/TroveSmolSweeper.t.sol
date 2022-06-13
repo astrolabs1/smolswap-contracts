@@ -12,7 +12,9 @@ import "@contracts/weth/WETH9.sol";
 import "@contracts/assets/erc721/NFTERC721.sol";
 import "@contracts/assets/erc1155/NFTERC1155.sol";
 
-contract TroveSmolSweepSwapperTest is DSTest {
+import "@utils/console.sol";
+
+contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
     ICheatCodes public constant CHEATCODES = ICheatCodes(HEVM_ADDRESS);
 
     TroveSmolSweeper public smolsweep;
@@ -21,6 +23,8 @@ contract TroveSmolSweepSwapperTest is DSTest {
     Magic public magic;
     WETH9 public weth;
     NFTERC721 public erc721;
+    NFTERC721 public erc721ETH;
+
     NFTERC1155 public erc1155;
 
     address public OWNER;
@@ -39,6 +43,7 @@ contract TroveSmolSweepSwapperTest is DSTest {
         magic = new Magic();
         weth = new WETH9();
         erc721 = new NFTERC721();
+        erc721ETH = new NFTERC721();
         erc1155 = new NFTERC1155();
 
         trove = new TroveMarketplace();
@@ -50,7 +55,25 @@ contract TroveSmolSweepSwapperTest is DSTest {
             address(magic)
         );
 
-        smolsweep = new TroveSmolSweeper(address(trove), address(magic));
+        console.log(address(magic), address(weth));
+
+        trove.setTokenApprovalStatus(
+            address(erc721ETH),
+            TroveMarketplace.TokenApprovalStatus.ERC_721_APPROVED,
+            address(weth)
+        );
+
+        // trove.setTokenApprovalStatus(
+        //     address(erc1155),
+        //     TroveMarketplace.TokenApprovalStatus.ERC_721_APPROVED,
+        //     address(magic)
+        // );
+
+        smolsweep = new TroveSmolSweeper(
+            address(trove),
+            address(magic),
+            address(weth)
+        );
     }
 
     function test_Owner() public {
@@ -170,4 +193,47 @@ contract TroveSmolSweepSwapperTest is DSTest {
         amounts[0] = 1e18;
         smolsweep.buyItemsManyTokens(buyParams, 0, tokens, amounts);
     }
+
+    function test_buyItemsSingleTokenUsingETHSingleERC721() public {
+        magic.mint(OWNER, 1e18);
+
+        erc721ETH.safeMint(SELLERS[0]);
+        uint256 tokenId = 0;
+
+        uint128 price = 1e9;
+
+        CHEATCODES.startPrank(SELLERS[0], SELLERS[0]);
+        erc721ETH.setApprovalForAll(address(trove), true);
+        trove.createListing(
+            address(erc721ETH),
+            tokenId,
+            1,
+            price,
+            uint64(block.timestamp + 100),
+            address(weth)
+        );
+        CHEATCODES.stopPrank();
+
+        // payable(BUYER).transfer(price);
+        // CHEATCODES.startPrank(BUYER, BUYER);
+        // magic.approve(address(smolsweep), 1e19);
+        BuyItemParams[] memory buyParams = new BuyItemParams[](1);
+        buyParams[0] = BuyItemParams(
+            address(erc721ETH),
+            tokenId,
+            SELLERS[0],
+            1,
+            price,
+            address(weth),
+            true
+        );
+        smolsweep.buyItemsSingleToken{value: 1e18}(
+            buyParams,
+            0,
+            address(weth),
+            1e18
+        );
+    }
+
+    receive() external payable {}
 }

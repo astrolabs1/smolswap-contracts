@@ -38,7 +38,7 @@ import "./ABaseSmolSweeper.sol";
 
 // import "../structs/TokenAmount.sol";
 
-// import "@utils/console.sol";
+import "@utils/console.sol";
 
 error InvalidMsgValue();
 error MsgValueShouldBeZero();
@@ -55,11 +55,17 @@ abstract contract ABaseTroveSmolSweeper is
     bytes4 private constant INTERFACE_ID_ERC1155 = 0xd9b67a26;
 
     IERC20 public defaultPaymentToken;
+    IERC20 public weth;
     ITroveMarketplace public troveMarketplace;
 
-    constructor(address _troveMarketplace, address _defaultPaymentToken) {
+    constructor(
+        address _troveMarketplace,
+        address _defaultPaymentToken,
+        address _weth
+    ) {
         troveMarketplace = ITroveMarketplace(_troveMarketplace);
         defaultPaymentToken = IERC20(_defaultPaymentToken);
+        weth = IERC20(_weth);
 
         // _approveERC20TokenToContract(
         //     IERC20(_defaultPaymentToken),
@@ -80,6 +86,10 @@ abstract contract ABaseTroveSmolSweeper is
         onlyOwner
     {
         defaultPaymentToken = _defaultPaymentToken;
+    }
+
+    function setWeth(IERC20 _weth) external onlyOwner {
+        weth = _weth;
     }
 
     // approve token to TreasureMarketplace contract address
@@ -118,13 +128,11 @@ abstract contract ABaseTroveSmolSweeper is
             uint16 failReason
         )
     {
+        console.log("hello");
         uint256 quantityToBuy = _buyOrder.quantity;
         // check if the listing exists
-        ITroveMarketplace.ListingOrBid memory listing = troveMarketplace.listings(
-            _buyOrder.nftAddress,
-            _buyOrder.tokenId,
-            _buyOrder.owner
-        );
+        ITroveMarketplace.ListingOrBid memory listing = troveMarketplace
+            .listings(_buyOrder.nftAddress, _buyOrder.tokenId, _buyOrder.owner);
 
         // // check if the price is correct
         // if (listing.pricePerItem > _buyOrder.maxPricePerItem) {
@@ -160,19 +168,20 @@ abstract contract ABaseTroveSmolSweeper is
 
         BuyItemParams[] memory buyItemParams = new BuyItemParams[](1);
         buyItemParams[0] = _buyOrder;
-        if (
-            _buyOrder.paymentToken != address(0) ||
-            _buyOrder.paymentToken != address(defaultPaymentToken)
-        ) {
-            IERC20(_buyOrder.paymentToken).approve(
-                address(troveMarketplace),
-                _buyOrder.maxPricePerItem
-            );
-        }
+        // if (
+        //     _buyOrder.paymentToken != address(0) ||
+        //     _buyOrder.paymentToken != address(defaultPaymentToken)
+        // ) {
+        //     IERC20(_buyOrder.paymentToken).approve(
+        //         address(troveMarketplace),
+        //         _buyOrder.maxPricePerItem
+        //     );
+        // }
         uint256 totalSpent = 0;
-        uint256 value = (_buyOrder.paymentToken == address(0))
+        uint256 value = (_buyOrder.paymentToken == address(weth))
             ? (_buyOrder.maxPricePerItem * quantityToBuy)
             : 0;
+        console.log("value: ", value, _buyOrder.paymentToken);
         try troveMarketplace.buyItems{value: value}(buyItemParams) {
             if (
                 SettingsBitFlag.checkSetting(
@@ -252,7 +261,7 @@ abstract contract ABaseTroveSmolSweeper is
         address _inputTokenAddress,
         uint256 _maxSpendIncFees
     ) external payable {
-        if (_inputTokenAddress == address(0)) {
+        if (_inputTokenAddress == address(weth) && _buyOrders[0].usingEth) {
             if (_maxSpendIncFees != msg.value) revert InvalidMsgValue();
         } else {
             if (msg.value != 0) revert MsgValueShouldBeZero();
@@ -279,7 +288,7 @@ abstract contract ABaseTroveSmolSweeper is
 
         uint256 feeAmount = _calculateFee(totalSpentAmount);
 
-        if (_inputTokenAddress == address(0)) {
+        if (_inputTokenAddress == address(weth) && _buyOrders[0].usingEth) {
             payable(msg.sender).transfer(
                 _maxSpendIncFees - (totalSpentAmount + feeAmount)
             );
@@ -344,7 +353,10 @@ abstract contract ABaseTroveSmolSweeper is
         uint256 i = 0;
         uint256 length = _inputTokenAddresses.length;
         for (; i < length; ) {
-            if (_inputTokenAddresses[i] == address(0)) {
+            if (
+                _inputTokenAddresses[i] == address(weth) &&
+                _buyOrders[0].usingEth
+            ) {
                 if (_maxSpendIncFees[i] != msg.value) revert InvalidMsgValue();
             } else {
                 if (msg.value != 0) revert MsgValueShouldBeZero();
@@ -383,7 +395,10 @@ abstract contract ABaseTroveSmolSweeper is
         for (; i < length; ) {
             uint256 feeAmount = _calculateFee(totalSpentAmount[i]);
 
-            if (_inputTokenAddresses[i] == address(0)) {
+            if (
+                _inputTokenAddresses[i] == address(weth) &&
+                _buyOrders[0].usingEth
+            ) {
                 payable(msg.sender).transfer(
                     _maxSpendIncFees[i] - (totalSpentAmount[i] + feeAmount)
                 );
@@ -454,7 +469,7 @@ abstract contract ABaseTroveSmolSweeper is
         uint32 _maxSuccesses,
         uint32 _maxFailures
     ) external payable {
-        if (_inputTokenAddress == address(0)) {
+        if (_inputTokenAddress == address(weth) && _buyOrders[0].usingEth) {
             if (_maxSpendIncFees != msg.value) revert InvalidMsgValue();
         } else {
             if (msg.value != 0) revert MsgValueShouldBeZero();
@@ -487,7 +502,7 @@ abstract contract ABaseTroveSmolSweeper is
         if (successCount == 0) revert AllReverted();
 
         uint256 feeAmount = _calculateFee(totalSpentAmount);
-        if (_inputTokenAddress == address(0)) {
+        if (_inputTokenAddress == address(weth) && _buyOrders[0].usingEth) {
             payable(msg.sender).transfer(
                 _maxSpendIncFees - (totalSpentAmount + feeAmount)
             );
@@ -559,7 +574,10 @@ abstract contract ABaseTroveSmolSweeper is
     ) external payable {
         // transfer payment tokens to this contract
         for (uint256 i = 0; i < _maxSpendIncFees.length; ) {
-            if (_inputTokenAddresses[i] == address(0)) {
+            if (
+                _inputTokenAddresses[i] == address(weth) &&
+                _buyOrders[0].usingEth
+            ) {
                 if (_maxSpendIncFees[i] != msg.value) revert InvalidMsgValue();
             } else {
                 if (msg.value != 0) revert MsgValueShouldBeZero();
@@ -604,7 +622,10 @@ abstract contract ABaseTroveSmolSweeper is
         for (uint256 i = 0; i < _maxSpendIncFees.length; ) {
             uint256 feeAmount = _calculateFee(totalSpentAmount[i]);
 
-            if (_inputTokenAddresses[i] == address(0)) {
+            if (
+                _inputTokenAddresses[i] == address(weth) &&
+                _buyOrders[0].usingEth
+            ) {
                 payable(msg.sender).transfer(
                     _maxSpendIncFees[i] - (totalSpentAmount[i] + feeAmount)
                 );

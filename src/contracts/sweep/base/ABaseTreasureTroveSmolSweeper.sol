@@ -287,19 +287,20 @@ abstract contract ABaseTreasureTroveSmolSweeper is
 
         BuyItemParams[] memory buyItemParams = new BuyItemParams[](1);
         buyItemParams[0] = _buyOrder;
-        if (
-            _buyOrder.paymentToken != address(0) ||
-            _buyOrder.paymentToken != address(defaultPaymentToken)
-        ) {
-            IERC20(_buyOrder.paymentToken).approve(
-                address(troveMarketplace),
-                _buyOrder.maxPricePerItem
-            );
-        }
+        // if (
+        //     _buyOrder.paymentToken != address(0) ||
+        //     _buyOrder.paymentToken != address(defaultPaymentToken)
+        // ) {
+        //     IERC20(_buyOrder.paymentToken).approve(
+        //         address(troveMarketplace),
+        //         _buyOrder.maxPricePerItem
+        //     );
+        // }
         uint256 totalSpent = 0;
         uint256 value = (_buyOrder.paymentToken == address(0))
             ? (_buyOrder.maxPricePerItem * quantityToBuy)
             : 0;
+
         try troveMarketplace.buyItems{value: value}(buyItemParams) {
             if (
                 SettingsBitFlag.checkSetting(
