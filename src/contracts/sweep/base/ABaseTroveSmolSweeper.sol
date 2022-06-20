@@ -527,7 +527,7 @@ abstract contract ABaseTroveSmolSweeper is
         )
     {
         // buy all assets
-        for (uint256 i = 0; i < _buyOrders.length; i++) {
+        for (uint256 i = 0; i < _buyOrders.length; ) {
             if (successCount >= _maxSuccesses || failCount >= _maxFailures)
                 break;
 
@@ -556,6 +556,10 @@ abstract contract ABaseTroveSmolSweeper is
                     )
                 ) break;
                 failCount++;
+            }
+
+            unchecked {
+                ++i;
             }
         }
     }
@@ -697,6 +701,7 @@ abstract contract ABaseTroveSmolSweeper is
 
     function _maxSpendWithoutFees(uint256[] memory _maxSpendIncFees)
         internal
+        view
         returns (uint256[] memory maxSpendIncFeesAmount)
     {
         maxSpendIncFeesAmount = new uint256[](_maxSpendIncFees.length);

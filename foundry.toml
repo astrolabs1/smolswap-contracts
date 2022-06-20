@@ -15,7 +15,7 @@ remappings = [
 ]
 optimizer = false
 # optimizer = true
-# optimizer_runs = 1
+# optimizer_runs = 100
 # via_ir = true
 
 

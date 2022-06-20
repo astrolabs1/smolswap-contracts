@@ -30,6 +30,7 @@ interface ITroveSmolSweepSwapper is ITroveSmolSweeper {
     function buyUsingOtherToken(
         BuyItemParams[] calldata _buyOrders,
         uint16 _inputSettingsBitFlag,
+        address _inputTokenAddress,
         uint256 _maxInputTokenAmount,
         address[] calldata _path,
         uint32 _routerId,
@@ -39,6 +40,7 @@ interface ITroveSmolSweepSwapper is ITroveSmolSweeper {
     function sweepUsingOtherToken(
         BuyItemParams[] calldata _buyOrders,
         uint16 _inputSettingsBitFlag,
+        address _inputTokenAddress,
         uint32 _maxSuccesses,
         uint32 _maxFailures,
         uint256 _maxInputTokenAmount,
