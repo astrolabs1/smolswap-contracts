@@ -29,14 +29,12 @@ contract TroveSmolSweepSwapper is ABaseTroveSmolSweepSwapper {
     constructor(
         address _troveMarketplace,
         address _defaultPaymentToken,
-        address _weth,
-        IUniswapV2Router02[] memory _swapRouters
+        address _weth
     )
         ABaseTroveSmolSweepSwapper(
             _troveMarketplace,
             _defaultPaymentToken,
-            _weth,
-            _swapRouters
+            _weth
         )
     {}
 }

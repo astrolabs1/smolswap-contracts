@@ -60,41 +60,35 @@ contract ABaseTroveSmolSweepSwapper is ABaseTroveSmolSweeper, ABaseSwapper {
     constructor(
         address _troveMarketplace,
         address _defaultPaymentToken,
-        address _weth,
-        IUniswapV2Router02[] memory _swapRouters
-    )
-        ABaseTroveSmolSweeper(_troveMarketplace, _defaultPaymentToken, _weth)
-        ABaseSwapper(_swapRouters)
-    {}
+        address _weth
+    ) ABaseTroveSmolSweeper(_troveMarketplace, _defaultPaymentToken, _weth) {}
 
     function buyUsingOtherToken(
         BuyItemParams[] calldata _buyOrders,
         uint16 _inputSettingsBitFlag,
-        address _inputTokenAddress,
-        uint256 _maxInputTokenAmount,
-        address[] calldata _path,
-        uint16 _routerId,
-        uint64 _deadline
+        Swap calldata _swap
     ) external {
-        IUniswapV2Router02 router = swapRouters[_routerId];
         uint256 maxSpendIncFees;
         {
-            IERC20(_path[0]).safeTransferFrom(
+            IERC20(_swap.path[0]).safeTransferFrom(
                 msg.sender,
                 address(this),
-                _maxInputTokenAmount
+                _swap.maxInputTokenAmount
             );
 
-            IERC20(_path[0]).approve(address(router), _maxInputTokenAmount);
-            uint256[] memory amountsIn = router.swapExactTokensForTokens(
-                _maxInputTokenAmount,
+            IERC20(_swap.path[0]).approve(
+                address(_swap.router),
+                _swap.maxInputTokenAmount
+            );
+            uint256[] memory amountsIn = _swap.router.swapExactTokensForTokens(
+                _swap.maxInputTokenAmount,
                 0,
-                _path,
+                _swap.path,
                 address(this),
-                _deadline
+                _swap.deadline
             );
             maxSpendIncFees = amountsIn[amountsIn.length - 1];
-            IERC20(_inputTokenAddress).approve(
+            IERC20(_swap.inputTokenAddress).approve(
                 address(troveMarketplace),
                 maxSpendIncFees
             );
@@ -115,14 +109,17 @@ contract ABaseTroveSmolSweepSwapper is ABaseTroveSmolSweeper, ABaseSwapper {
                 SettingsBitFlag.REFUND_IN_INPUT_TOKEN
             )
         ) {
-            address[] memory reversePath = _path.reverse();
-            IERC20(defaultPaymentToken).approve(address(router), refundAmount);
-            uint256[] memory amounts = router.swapExactTokensForTokens(
+            address[] memory reversePath = _swap.path.reverse();
+            IERC20(defaultPaymentToken).approve(
+                address(_swap.router),
+                refundAmount
+            );
+            uint256[] memory amounts = _swap.router.swapExactTokensForTokens(
                 refundAmount,
                 0,
                 reversePath,
                 address(this),
-                _deadline
+                _swap.deadline
             );
             payable(msg.sender).transfer(amounts[amounts.length - 1]);
         } else {
@@ -215,30 +212,29 @@ contract ABaseTroveSmolSweepSwapper is ABaseTroveSmolSweeper, ABaseSwapper {
         BuyItemParams[] memory _buyOrders,
         uint16 _inputSettingsBitFlag,
         address _inputTokenAddress,
+        uint256 _minSpend,
         uint32 _maxSuccesses,
         uint32 _maxFailures,
-        uint256 _maxInputTokenAmount,
-        uint256 _minSpend,
-        address[] memory _path,
-        uint16 _routerId,
-        uint64 _deadline
+        Swap calldata _swap
     ) external {
-        IUniswapV2Router02 router = swapRouters[_routerId];
         uint256 maxSpendIncFees;
         {
-            IERC20(_path[0]).safeTransferFrom(
+            IERC20(_swap.path[0]).safeTransferFrom(
                 msg.sender,
                 address(this),
-                _maxInputTokenAmount
+                _swap.maxInputTokenAmount
             );
-            IERC20(_path[0]).approve(address(router), _maxInputTokenAmount);
+            IERC20(_swap.path[0]).approve(
+                address(_swap.router),
+                _swap.maxInputTokenAmount
+            );
 
-            uint256[] memory amountsIn = router.swapExactTokensForTokens(
-                _maxInputTokenAmount,
+            uint256[] memory amountsIn = _swap.router.swapExactTokensForTokens(
+                _swap.maxInputTokenAmount,
                 0,
-                _path,
+                _swap.path,
                 address(this),
-                _deadline
+                _swap.deadline
             );
             maxSpendIncFees = amountsIn[amountsIn.length - 1];
             IERC20(_inputTokenAddress).approve(
@@ -269,14 +265,17 @@ contract ABaseTroveSmolSweepSwapper is ABaseTroveSmolSweeper, ABaseSwapper {
         ) {
             uint256 refundAmount = maxSpendIncFees -
                 (totalSpentAmount + _calculateFee(totalSpentAmount));
-            address[] memory reversePath = _path.reverse();
-            IERC20(defaultPaymentToken).approve(address(router), refundAmount);
-            uint256[] memory amounts = router.swapExactTokensForTokens(
+            address[] memory reversePath = _swap.path.reverse();
+            IERC20(defaultPaymentToken).approve(
+                address(_swap.router),
+                refundAmount
+            );
+            uint256[] memory amounts = _swap.router.swapExactTokensForTokens(
                 refundAmount,
                 0,
                 reversePath,
                 address(this),
-                _deadline
+                _swap.deadline
             );
             payable(msg.sender).transfer(amounts[amounts.length - 1]);
         } else {

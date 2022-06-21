@@ -25,16 +25,16 @@ pragma solidity ^0.8.14;
 
 import "./base/ABaseTreasureSmolSweepSwapper.sol";
 
-contract TreasureSmolSweepSwapper is ABaseTreasureSmolSweepSwapper {
-    constructor(
-        address _treasureMarketplace,
-        address _defaultPaymentToken,
-        IUniswapV2Router02[] memory _swapRouters
-    )
-        ABaseTreasureSmolSweepSwapper(
-            _treasureMarketplace,
-            _defaultPaymentToken,
-            _swapRouters
-        )
-    {}
-}
+// contract TreasureSmolSweepSwapper is ABaseTreasureSmolSweepSwapper {
+//     constructor(
+//         address _treasureMarketplace,
+//         address _defaultPaymentToken,
+//         IUniswapV2Router02[] memory _swapRouters
+//     )
+//         ABaseTreasureSmolSweepSwapper(
+//             _treasureMarketplace,
+//             _defaultPaymentToken,
+//             _swapRouters
+//         )
+//     {}
+// }
