@@ -12,8 +12,6 @@ import "@contracts/weth/WETH9.sol";
 import "@contracts/assets/erc721/NFTERC721.sol";
 import "@contracts/assets/erc1155/NFTERC1155.sol";
 
-import "@utils/console.sol";
-
 contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
     ICheatCodes public constant CHEATCODES = ICheatCodes(HEVM_ADDRESS);
 
@@ -29,12 +27,14 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
 
     address public OWNER;
     address public constant NOT_OWNER =
-        0x0000000000000000000000000000000000000000;
-    address public constant BUYER = 0x0000000000000000000000000000000000000001;
+        0x0000000000000000000000000000000000000001;
+    address public constant NEW_OWNER =
+        0x0000000000000000000000000000000000000002;
+    address public constant BUYER = 0x0000000000000000000000000000000000000003;
     address[] public SELLERS = [
-        0x0000000000000000000000000000000000000002,
-        0x0000000000000000000000000000000000000003,
-        0x0000000000000000000000000000000000000004
+        0x0000000000000000000000000000000000000004,
+        0x0000000000000000000000000000000000000005,
+        0x0000000000000000000000000000000000000006
     ];
 
     function setUp() public {
@@ -55,8 +55,6 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
             address(magic)
         );
 
-        console.log(address(magic), address(weth));
-
         trove.setTokenApprovalStatus(
             address(erc721ETH),
             TroveMarketplace.TokenApprovalStatus.ERC_721_APPROVED,
@@ -76,15 +74,16 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
         );
     }
 
-    function test_Owner() public {
-        assert(smolsweep.owner() == OWNER);
+    function test_owner() public {
+        assertEq(smolsweep.owner(), OWNER);
     }
 
-    function test_NotOwner() public {
-        assert(smolsweep.owner() != NOT_OWNER);
+    function test_transferOwnership() public {
+        smolsweep.transferOwnership(NEW_OWNER);
+        assertEq(smolsweep.owner(), NEW_OWNER);
     }
 
-    function test_BuySingleFromTrove() public {
+    function test_buySingleFromTrove() public {
         magic.mint(BUYER, 1e18);
 
         erc721.safeMint(SELLERS[0]);
@@ -151,7 +150,17 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
             address(magic),
             false
         );
+        uint256 sellerBalanceMagicBefore = magic.balanceOf(SELLERS[0]);
+        uint256 buyerBalanceMagicBefore = magic.balanceOf(BUYER);
         smolsweep.buyItemsSingleToken(buyParams, 0, address(magic), 1e18);
+        uint256 sellerBalanceMagicAfter = magic.balanceOf(SELLERS[0]);
+        uint256 buyerBalanceMagicAfter = magic.balanceOf(BUYER);
+        assertEq(sellerBalanceMagicAfter - sellerBalanceMagicBefore, price);
+        assertEq(buyerBalanceMagicBefore - buyerBalanceMagicAfter, price);
+
+        assertEq(erc721.ownerOf(tokenId), BUYER);
+        assertEq(erc721.balanceOf(BUYER), 1);
+        assertEq(erc721.balanceOf(SELLERS[0]), 0);
     }
 
     function test_buyItemsManyTokensSingleERC721() public {
@@ -191,7 +200,18 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
         tokens[0] = address(magic);
         uint256[] memory amounts = new uint256[](1);
         amounts[0] = 1e18;
+        uint256 sellerBalanceMagicBefore = magic.balanceOf(SELLERS[0]);
+        uint256 buyerBalanceMagicBefore = magic.balanceOf(BUYER);
         smolsweep.buyItemsManyTokens(buyParams, 0, tokens, amounts);
+
+        uint256 sellerBalanceMagicAfter = magic.balanceOf(SELLERS[0]);
+        uint256 buyerBalanceMagicAfter = magic.balanceOf(BUYER);
+        assertEq(sellerBalanceMagicAfter - sellerBalanceMagicBefore, price);
+        assertEq(buyerBalanceMagicBefore - buyerBalanceMagicAfter, price);
+
+        assertEq(erc721.ownerOf(tokenId), BUYER);
+        assertEq(erc721.balanceOf(BUYER), 1);
+        assertEq(erc721.balanceOf(SELLERS[0]), 0);
     }
 
     function test_buyItemsSingleTokenUsingETHSingleERC721() public {
@@ -214,9 +234,9 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
         );
         CHEATCODES.stopPrank();
 
-        // payable(BUYER).transfer(price);
-        // CHEATCODES.startPrank(BUYER, BUYER);
-        // magic.approve(address(smolsweep), 1e19);
+        // uint256 sellerBalanceMagicBefore = magic.balanceOf(SELLERS[0]);
+        // uint256 buyerBalanceMagicBefore = magic.balanceOf(BUYER);
+        //         CHEATCODES.prank(BUYER, BUYER);
         BuyItemParams[] memory buyParams = new BuyItemParams[](1);
         buyParams[0] = BuyItemParams(
             address(erc721ETH),
@@ -235,85 +255,229 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
         );
     }
 
-    function test_buyItemsSingleTokenUsingETHAndMagicSingleERC721() public {
-        magic.mint(OWNER, 1e18);
+    function test_buyItemsManyTokenUsingMagicAndETHSingleERC721() public {
+        magic.mint(BUYER, 1e18);
 
-        erc721ETH.safeMint(SELLERS[0]);
         erc721.safeMint(SELLERS[0]);
+        erc721ETH.safeMint(SELLERS[1]);
         uint256 tokenId = 0;
 
-        uint128 price = 1e9;
+        uint128 price0 = 1e9;
+        uint128 price1 = 1e9;
 
-        CHEATCODES.startPrank(SELLERS[0], SELLERS[0]);
-        erc721ETH.setApprovalForAll(address(trove), true);
-        trove.createListing(
-            address(erc721ETH),
-            tokenId,
-            1,
-            price,
-            uint64(block.timestamp + 100),
-            address(weth)
-        );
-        erc721.setApprovalForAll(address(trove), true);
-        trove.createListing(
-            address(erc721),
-            tokenId,
-            1,
-            price,
-            uint64(block.timestamp + 100),
-            address(magic)
-        );
-        CHEATCODES.stopPrank();
+        {
+            CHEATCODES.startPrank(SELLERS[0], SELLERS[0]);
+            erc721.setApprovalForAll(address(trove), true);
+            trove.createListing(
+                address(erc721),
+                tokenId,
+                1,
+                price1,
+                uint64(block.timestamp + 100),
+                address(magic)
+            );
+            CHEATCODES.stopPrank();
 
-        // payable(BUYER).transfer(price);
-        // CHEATCODES.startPrank(BUYER, BUYER);
-        magic.approve(address(smolsweep), 1e19);
-        BuyItemParams[] memory buyParams = new BuyItemParams[](2);
-        buyParams[0] = BuyItemParams(
-            address(erc721ETH),
-            tokenId,
-            SELLERS[0],
-            1,
-            price,
-            address(weth),
-            true
-        );
-        buyParams[1] = BuyItemParams(
-            address(erc721),
-            tokenId,
-            SELLERS[0],
-            1,
-            price,
-            address(magic),
-            false
-        );
+            CHEATCODES.startPrank(SELLERS[1], SELLERS[1]);
+            erc721ETH.setApprovalForAll(address(trove), true);
+            trove.createListing(
+                address(erc721ETH),
+                tokenId,
+                1,
+                price0,
+                uint64(block.timestamp + 100),
+                address(weth)
+            );
+            CHEATCODES.stopPrank();
 
-        address[] memory tokens = new address[](2);
-        tokens[0] = address(weth);
-        tokens[1] = address(magic);
-        uint256[] memory amounts = new uint256[](2);
-        amounts[0] = 1e18;
-        amounts[1] = 1e18;
-        smolsweep.buyItemsManyTokens{value: 1e18}(
-            buyParams,
-            0,
-            tokens,
-            amounts
-        );
+            CHEATCODES.prank(BUYER, BUYER);
+            magic.approve(address(smolsweep), 1e19);
+            BuyItemParams[] memory buyParams = new BuyItemParams[](2);
+            buyParams[0] = BuyItemParams(
+                address(erc721),
+                tokenId,
+                SELLERS[0],
+                1,
+                price0,
+                address(magic),
+                false
+            );
+            buyParams[1] = BuyItemParams(
+                address(erc721ETH),
+                tokenId,
+                SELLERS[1],
+                1,
+                price1,
+                address(weth),
+                true
+            );
 
-        assertEq(erc721ETH.balanceOf(OWNER), 1);
-        assertEq(erc721.balanceOf(OWNER), 1);
-        assertEq(erc721.ownerOf(tokenId), OWNER);
-        assertEq(erc721ETH.ownerOf(tokenId), OWNER);
+            address[] memory tokens = new address[](2);
+            tokens[0] = address(magic);
+            tokens[1] = address(weth);
+            uint256[] memory amounts = new uint256[](2);
+            amounts[0] = price0;
+            amounts[1] = price1;
+
+            payable(BUYER).transfer(price1);
+            uint256 seller0BalanceMagicBefore = magic.balanceOf(SELLERS[0]);
+            uint256 seller1BalanceETHBefore = SELLERS[1].balance;
+            uint256 buyerBalanceMagicBefore = magic.balanceOf(BUYER);
+            uint256 buyerBalanceETHBefore = BUYER.balance;
+
+            CHEATCODES.prank(BUYER, BUYER);
+            smolsweep.buyItemsManyTokens{value: price1}(
+                buyParams,
+                0,
+                tokens,
+                amounts
+            );
+            uint256 seller0BalanceMagicAfter = magic.balanceOf(SELLERS[0]);
+            uint256 seller1BalanceETHAfter = SELLERS[1].balance;
+            uint256 buyerBalanceMagicAfter = magic.balanceOf(BUYER);
+            uint256 buyerBalanceETHAfter = BUYER.balance;
+
+            assertEq(
+                seller0BalanceMagicAfter - seller0BalanceMagicBefore,
+                price0
+            );
+            assertEq(seller1BalanceETHAfter - seller1BalanceETHBefore, price1);
+            assertEq(buyerBalanceMagicBefore - buyerBalanceMagicAfter, price0);
+            assertEq(buyerBalanceETHBefore - buyerBalanceETHAfter, price1);
+        }
+
+        assertEq(erc721.balanceOf(BUYER), 1);
+        assertEq(erc721.balanceOf(SELLERS[0]), 0);
+        assertEq(erc721.ownerOf(tokenId), BUYER);
+        assertEq(erc721ETH.balanceOf(BUYER), 1);
+        assertEq(erc721ETH.balanceOf(SELLERS[1]), 0);
+        assertEq(erc721ETH.ownerOf(tokenId), BUYER);
     }
 
-    function test_buyItemsSingleTokenUsingMagicAndETHSingleERC721() public {
-        magic.mint(OWNER, 1e18);
+    function test_sweepItemsSingleTokenSingleERC721() public {
+        magic.mint(BUYER, 1e18);
 
-        erc721ETH.safeMint(SELLERS[0]);
         erc721.safeMint(SELLERS[0]);
         uint256 tokenId = 0;
 
+        uint128 price = 1e9;
+
+        CHEATCODES.startPrank(SELLERS[0], SELLERS[0]);
+        erc721.setApprovalForAll(address(trove), true);
+        trove.createListing(
+            address(erc721),
+            tokenId,
+            1,
+            price,
+            uint64(block.timestamp + 100),
+            address(magic)
+        );
+        CHEATCODES.stopPrank();
+
+        CHEATCODES.prank(BUYER, BUYER);
+        magic.approve(address(smolsweep), 1e19);
+        BuyItemParams[] memory buyParams = new BuyItemParams[](1);
+        buyParams[0] = BuyItemParams(
+            address(erc721),
+            tokenId,
+            SELLERS[0],
+            1,
+            price,
+            address(magic),
+            false
+        );
+
+        uint256 sellerBalanceMagicBefore = magic.balanceOf(SELLERS[0]);
+        uint256 buyerBalanceMagicBefore = magic.balanceOf(BUYER);
+        CHEATCODES.prank(BUYER, BUYER);
+        smolsweep.sweepItemsSingleToken(
+            buyParams,
+            0,
+            address(magic),
+            price,
+            price,
+            1,
+            1
+        );
+        uint256 sellerBalanceMagicAfter = magic.balanceOf(SELLERS[0]);
+        uint256 buyerBalanceMagicAfter = magic.balanceOf(BUYER);
+
+        assertEq(sellerBalanceMagicAfter - sellerBalanceMagicBefore, price);
+        assertEq(buyerBalanceMagicBefore - buyerBalanceMagicAfter, price);
+
+        assertEq(erc721.balanceOf(BUYER), 1);
+        assertEq(erc721.balanceOf(SELLERS[0]), 0);
+        assertEq(erc721.ownerOf(tokenId), BUYER);
+    }
+
+    function test_sweepItemsManyTokensSingleERC721() public {
+        magic.mint(BUYER, 1e18);
+
+        erc721.safeMint(SELLERS[0]);
+        uint256 tokenId = 0;
+
+        uint128 price = 1e9;
+
+        CHEATCODES.startPrank(SELLERS[0], SELLERS[0]);
+        erc721.setApprovalForAll(address(trove), true);
+        trove.createListing(
+            address(erc721),
+            tokenId,
+            1,
+            price,
+            uint64(block.timestamp + 100),
+            address(magic)
+        );
+        CHEATCODES.stopPrank();
+
+        CHEATCODES.prank(BUYER, BUYER);
+        magic.approve(address(smolsweep), 1e19);
+        BuyItemParams[] memory buyParams = new BuyItemParams[](1);
+        buyParams[0] = BuyItemParams(
+            address(erc721),
+            tokenId,
+            SELLERS[0],
+            1,
+            price,
+            address(magic),
+            false
+        );
+
+        address[] memory tokens = new address[](1);
+        tokens[0] = address(magic);
+        uint256[] memory maxSpends = new uint256[](1);
+        maxSpends[0] = price;
+        uint256[] memory minSpends = new uint256[](1);
+        minSpends[0] = price;
+
+        uint256 sellerBalanceMagicBefore = magic.balanceOf(SELLERS[0]);
+        uint256 buyerBalanceMagicBefore = magic.balanceOf(BUYER);
+        CHEATCODES.prank(BUYER, BUYER);
+        smolsweep.sweepItemsManyTokens(
+            buyParams,
+            0,
+            tokens,
+            maxSpends,
+            minSpends,
+            1,
+            1
+        );
+        uint256 sellerBalanceMagicAfter = magic.balanceOf(SELLERS[0]);
+        uint256 buyerBalanceMagicAfter = magic.balanceOf(BUYER);
+
+        assertEq(sellerBalanceMagicAfter - sellerBalanceMagicBefore, price);
+        assertEq(buyerBalanceMagicBefore - buyerBalanceMagicAfter, price);
+
+        assertEq(erc721.balanceOf(BUYER), 1);
+        assertEq(erc721.balanceOf(SELLERS[0]), 0);
+        assertEq(erc721.ownerOf(tokenId), BUYER);
+    }
+
+    function test_sweepItemsSingleTokenUsingETHSingleERC721() public {
+        magic.mint(OWNER, 1e18);
+
+        erc721ETH.safeMint(SELLERS[0]);
+        uint256 tokenId = 0;
         uint128 price = 1e9;
 
         CHEATCODES.startPrank(SELLERS[0], SELLERS[0]);
@@ -326,30 +490,9 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
             uint64(block.timestamp + 100),
             address(weth)
         );
-        erc721.setApprovalForAll(address(trove), true);
-        trove.createListing(
-            address(erc721),
-            tokenId,
-            1,
-            price,
-            uint64(block.timestamp + 100),
-            address(magic)
-        );
         CHEATCODES.stopPrank();
 
-        // payable(BUYER).transfer(price);
-        // CHEATCODES.startPrank(BUYER, BUYER);
-        magic.approve(address(smolsweep), 1e19);
-        BuyItemParams[] memory buyParams = new BuyItemParams[](2);
-        buyParams[1] = BuyItemParams(
-            address(erc721),
-            tokenId,
-            SELLERS[0],
-            1,
-            price,
-            address(magic),
-            false
-        );
+        BuyItemParams[] memory buyParams = new BuyItemParams[](1);
         buyParams[0] = BuyItemParams(
             address(erc721ETH),
             tokenId,
@@ -360,23 +503,193 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
             true
         );
 
-        address[] memory tokens = new address[](2);
+        payable(BUYER).transfer(price);
+        uint256 sellerBalanceETHBefore = SELLERS[0].balance;
+        uint256 buyerBalanceETHBefore = BUYER.balance;
+        CHEATCODES.prank(BUYER, BUYER);
+        smolsweep.sweepItemsSingleToken{value: price}(
+            buyParams,
+            0,
+            address(weth),
+            price,
+            price,
+            1,
+            1
+        );
+        uint256 sellerBalanceETHAfter = SELLERS[0].balance;
+        uint256 buyerBalanceETHAfter = BUYER.balance;
+
+        assertEq(sellerBalanceETHAfter - sellerBalanceETHBefore, price);
+        assertEq(buyerBalanceETHBefore - buyerBalanceETHAfter, price);
+        assertEq(erc721ETH.balanceOf(SELLERS[0]), 0);
+        assertEq(erc721ETH.balanceOf(BUYER), 1);
+        assertEq(erc721ETH.ownerOf(0), BUYER);
+    }
+
+    function test_sweepItemsManyTokensUsingETHSingleERC721() public {
+        magic.mint(OWNER, 1e18);
+
+        erc721ETH.safeMint(SELLERS[0]);
+        uint256 tokenId = 0;
+        uint128 price = 1e9;
+
+        CHEATCODES.startPrank(SELLERS[0], SELLERS[0]);
+        erc721ETH.setApprovalForAll(address(trove), true);
+        trove.createListing(
+            address(erc721ETH),
+            tokenId,
+            1,
+            price,
+            uint64(block.timestamp + 100),
+            address(weth)
+        );
+        CHEATCODES.stopPrank();
+
+        BuyItemParams[] memory buyParams = new BuyItemParams[](1);
+        buyParams[0] = BuyItemParams(
+            address(erc721ETH),
+            tokenId,
+            SELLERS[0],
+            1,
+            price,
+            address(weth),
+            true
+        );
+
+        address[] memory tokens = new address[](1);
         tokens[0] = address(weth);
-        tokens[1] = address(magic);
-        uint256[] memory amounts = new uint256[](2);
-        amounts[0] = 1e18;
-        amounts[1] = 1e18;
-        smolsweep.buyItemsManyTokens{value: 1e18}(
+        uint256[] memory maxSpends = new uint256[](1);
+        maxSpends[0] = price;
+        uint256[] memory minSpends = new uint256[](1);
+        minSpends[0] = price;
+
+        payable(BUYER).transfer(price);
+        uint256 sellerBalanceETHBefore = SELLERS[0].balance;
+        uint256 buyerBalanceETHBefore = BUYER.balance;
+
+        CHEATCODES.prank(BUYER, BUYER);
+        smolsweep.sweepItemsManyTokens{value: price}(
             buyParams,
             0,
             tokens,
-            amounts
+            maxSpends,
+            minSpends,
+            1,
+            1
         );
+        uint256 sellerBalanceETHAfter = SELLERS[0].balance;
+        uint256 buyerBalanceETHAfter = BUYER.balance;
 
-        assertEq(erc721ETH.balanceOf(OWNER), 1);
-        assertEq(erc721.balanceOf(OWNER), 1);
-        assertEq(erc721.ownerOf(tokenId), OWNER);
-        assertEq(erc721ETH.ownerOf(tokenId), OWNER);
+        assertEq(sellerBalanceETHAfter - sellerBalanceETHBefore, price);
+        assertEq(buyerBalanceETHBefore - buyerBalanceETHAfter, price);
+        assertEq(erc721ETH.balanceOf(SELLERS[0]), 0);
+        assertEq(erc721ETH.balanceOf(BUYER), 1);
+        assertEq(erc721ETH.ownerOf(0), BUYER);
+    }
+
+    function test_sweepItemsManyTokenUsingETHAndMagicSingleERC721() public {
+        magic.mint(BUYER, 1e18);
+
+        erc721.safeMint(SELLERS[0]);
+        erc721ETH.safeMint(SELLERS[1]);
+        uint256 tokenId = 0;
+
+        uint128 price0 = 1e9;
+        uint128 price1 = 1e9;
+
+        {
+            CHEATCODES.startPrank(SELLERS[0], SELLERS[0]);
+            erc721.setApprovalForAll(address(trove), true);
+            trove.createListing(
+                address(erc721),
+                tokenId,
+                1,
+                price1,
+                uint64(block.timestamp + 100),
+                address(magic)
+            );
+            CHEATCODES.stopPrank();
+
+            CHEATCODES.startPrank(SELLERS[1], SELLERS[1]);
+            erc721ETH.setApprovalForAll(address(trove), true);
+            trove.createListing(
+                address(erc721ETH),
+                tokenId,
+                1,
+                price0,
+                uint64(block.timestamp + 100),
+                address(weth)
+            );
+            CHEATCODES.stopPrank();
+
+            CHEATCODES.prank(BUYER, BUYER);
+            magic.approve(address(smolsweep), 1e19);
+            BuyItemParams[] memory buyParams = new BuyItemParams[](2);
+            buyParams[0] = BuyItemParams(
+                address(erc721),
+                tokenId,
+                SELLERS[0],
+                1,
+                price0,
+                address(magic),
+                false
+            );
+            buyParams[1] = BuyItemParams(
+                address(erc721ETH),
+                tokenId,
+                SELLERS[1],
+                1,
+                price1,
+                address(weth),
+                true
+            );
+
+            address[] memory tokens = new address[](2);
+            tokens[0] = address(magic);
+            tokens[1] = address(weth);
+            uint256[] memory maxSpends = new uint256[](2);
+            maxSpends[0] = price0;
+            maxSpends[1] = price1;
+            uint256[] memory minSpends = new uint256[](2);
+            minSpends[0] = price0;
+            minSpends[1] = price1;
+
+            payable(BUYER).transfer(price1);
+            uint256 seller0BalanceMagicBefore = magic.balanceOf(SELLERS[0]);
+            uint256 seller1BalanceETHBefore = SELLERS[1].balance;
+            uint256 buyerBalanceMagicBefore = magic.balanceOf(BUYER);
+            uint256 buyerBalanceETHBefore = BUYER.balance;
+
+            CHEATCODES.prank(BUYER, BUYER);
+            smolsweep.sweepItemsManyTokens{value: price1}(
+                buyParams,
+                0,
+                tokens,
+                maxSpends,
+                minSpends,
+                2,
+                2
+            );
+            uint256 seller0BalanceMagicAfter = magic.balanceOf(SELLERS[0]);
+            uint256 seller1BalanceETHAfter = SELLERS[1].balance;
+            uint256 buyerBalanceMagicAfter = magic.balanceOf(BUYER);
+            uint256 buyerBalanceETHAfter = BUYER.balance;
+
+            assertEq(
+                seller0BalanceMagicAfter - seller0BalanceMagicBefore,
+                price0
+            );
+            assertEq(seller1BalanceETHAfter - seller1BalanceETHBefore, price1);
+            assertEq(buyerBalanceMagicBefore - buyerBalanceMagicAfter, price0);
+            assertEq(buyerBalanceETHBefore - buyerBalanceETHAfter, price1);
+        }
+
+        assertEq(erc721.balanceOf(BUYER), 1);
+        assertEq(erc721.balanceOf(SELLERS[0]), 0);
+        assertEq(erc721.ownerOf(tokenId), BUYER);
+        assertEq(erc721ETH.balanceOf(BUYER), 1);
+        assertEq(erc721ETH.balanceOf(SELLERS[1]), 0);
+        assertEq(erc721ETH.ownerOf(tokenId), BUYER);
     }
 
     receive() external payable {}

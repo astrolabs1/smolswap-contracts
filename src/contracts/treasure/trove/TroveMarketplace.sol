@@ -415,7 +415,6 @@ contract TroveMarketplace is
             _nftAddress
         );
 
-        console.log("payment", _paymentTokenForCollection, _paymentToken);
         require(
             _paymentTokenForCollection == _paymentToken,
             "TreasureMarketplace: Wrong payment token"

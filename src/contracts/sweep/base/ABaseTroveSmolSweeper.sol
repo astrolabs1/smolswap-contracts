@@ -128,7 +128,6 @@ abstract contract ABaseTroveSmolSweeper is
             uint16 failReason
         )
     {
-        console.log("hello");
         uint256 quantityToBuy = _buyOrder.quantity;
         // check if the listing exists
         ITroveMarketplace.ListingOrBid memory listing = troveMarketplace
@@ -181,7 +180,7 @@ abstract contract ABaseTroveSmolSweeper is
         uint256 value = (_buyOrder.paymentToken == address(weth))
             ? (_buyOrder.maxPricePerItem * quantityToBuy)
             : 0;
-        console.log("value: ", value, _buyOrder.paymentToken);
+
         try troveMarketplace.buyItems{value: value}(buyItemParams) {
             if (
                 SettingsBitFlag.checkSetting(
@@ -578,7 +577,7 @@ abstract contract ABaseTroveSmolSweeper is
             if (_inputTokenAddresses[i] == address(weth) && msg.value > 0) {
                 if (_maxSpendIncFees[i] != msg.value) revert InvalidMsgValue();
             } else {
-                if (msg.value != 0) revert MsgValueShouldBeZero();
+                // if (msg.value != 0) revert MsgValueShouldBeZero();
                 // transfer payment tokens to this contract
                 IERC20(_inputTokenAddresses[i]).safeTransferFrom(
                     msg.sender,
@@ -659,15 +658,15 @@ abstract contract ABaseTroveSmolSweeper is
         totalSpentAmounts = new uint256[](_inputTokenAddresses.length);
 
         for (uint256 i = 0; i < _buyOrders.length; ) {
-            // BuyItemParams memory buyItemParam = _buyOrders[i];
             if (successCount >= _maxSuccesses || failCount >= _maxFailures)
                 break;
 
             uint256 j = _getTokenIndex(
                 _inputTokenAddresses,
-                _buyOrders[i].nftAddress
+                _buyOrders[i].paymentToken
             );
-            if (totalSpentAmounts[j] >= _minSpends[i]) break;
+
+            if (totalSpentAmounts[j] >= _minSpends[j]) break;
 
             (
                 uint256 spentAmount,
@@ -720,7 +719,7 @@ abstract contract ABaseTroveSmolSweeper is
     function _getTokenIndex(
         address[] memory _inputTokenAddresses,
         address _buyOrderPaymentToken
-    ) internal pure returns (uint256 j) {
+    ) internal returns (uint256 j) {
         for (; j < _inputTokenAddresses.length; ) {
             if (_inputTokenAddresses[j] == _buyOrderPaymentToken) {
                 return j;

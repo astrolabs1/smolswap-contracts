@@ -291,9 +291,9 @@ contract ABaseTroveSmolSweepSwapper is ABaseTroveSmolSweeper, ABaseSwapper {
     function sweepUsingOtherToken(
         BuyItemParams[] memory _buyOrders,
         uint16 _inputSettingsBitFlag,
+        uint256[] memory _minSpends,
         uint32 _maxSuccesses,
         uint32 _maxFailures,
-        uint256 _minSpend,
         Swap[] calldata _swaps
     ) external {
         uint256[] memory maxSpendIncFees = new uint256[](_swaps.length);
@@ -329,12 +329,16 @@ contract ABaseTroveSmolSweepSwapper is ABaseTroveSmolSweeper, ABaseSwapper {
             }
             (
                 uint256[] memory totalSpentAmounts2,
-                uint256 successCount
+                uint256 successCount,
+
             ) = _sweepItemsManyTokens(
                     _buyOrders,
                     _inputSettingsBitFlag,
                     inputTokens,
-                    maxSpends
+                    maxSpends,
+                    _minSpends,
+                    _maxSuccesses,
+                    _maxFailures
                 );
             totalSpentAmounts = totalSpentAmounts2;
             // transfer back failed payment tokens to the buyer
