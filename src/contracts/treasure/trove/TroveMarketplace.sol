@@ -13,7 +13,6 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 
 import "../interfaces/ITroveMarketplace.sol";
 
-import "@utils/console.sol";
 
 /// @title  Treasure NFT marketplace
 /// @notice This contract allows you to buy and sell NFTs from token contracts that are approved by the contract owner.

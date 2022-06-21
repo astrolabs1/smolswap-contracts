@@ -36,9 +36,9 @@ import "../structs/BuyOrder.sol";
 import "../interfaces/ITroveSmolSweeper.sol";
 import "./ABaseSmolSweeper.sol";
 
-// import "../structs/TokenAmount.sol";
+import "../errors/BuyError.sol";
 
-import "@utils/console.sol";
+// import "@utils/console.sol";
 
 error InvalidMsgValue();
 error MsgValueShouldBeZero();
@@ -66,12 +66,6 @@ abstract contract ABaseTroveSmolSweeper is
         troveMarketplace = ITroveMarketplace(_troveMarketplace);
         defaultPaymentToken = IERC20(_defaultPaymentToken);
         weth = IERC20(_weth);
-
-        // _approveERC20TokenToContract(
-        //     IERC20(_defaultPaymentToken),
-        //     _troveMarketplace,
-        //     type(uint256).max
-        // );
     }
 
     function setMarketplaceContract(ITroveMarketplace _troveMarketplace)
@@ -90,18 +84,6 @@ abstract contract ABaseTroveSmolSweeper is
 
     function setWeth(IERC20 _weth) external onlyOwner {
         weth = _weth;
-    }
-
-    // approve token to TreasureMarketplace contract address
-    function approveDefaultPaymentTokensToTreasureMarketplace()
-        external
-        onlyOwner
-    {
-        _approveERC20TokenToContract(
-            defaultPaymentToken,
-            address(troveMarketplace),
-            type(uint256).max
-        );
     }
 
     function sumTotalPrice(BuyOrder[] memory _buyOrders)
@@ -125,7 +107,7 @@ abstract contract ABaseTroveSmolSweeper is
         returns (
             uint256 totalPrice,
             bool success,
-            uint16 failReason
+            BuyError buyError
         )
     {
         uint256 quantityToBuy = _buyOrder.quantity;
@@ -151,31 +133,18 @@ abstract contract ABaseTroveSmolSweeper is
                 quantityToBuy = listing.quantity;
             } else {
                 // skip this item
-                return (
-                    0,
-                    false,
-                    SettingsBitFlag.INSUFFICIENT_QUANTITY_ERC1155
-                );
+                return (0, false, BuyError.INSUFFICIENT_QUANTITY_ERC1155);
             }
         }
 
         // check if total price is less than max spend allowance left
         if ((listing.pricePerItem * quantityToBuy) > _maxSpendAllowanceLeft) {
-            // skip this item
-            return (0, false, SettingsBitFlag.MAX_SPEND_ALLOWANCE_EXCEEDED);
+            return (0, false, BuyError.EXCEEDING_MAX_SPEND);
         }
 
         BuyItemParams[] memory buyItemParams = new BuyItemParams[](1);
         buyItemParams[0] = _buyOrder;
-        // if (
-        //     _buyOrder.paymentToken != address(0) ||
-        //     _buyOrder.paymentToken != address(defaultPaymentToken)
-        // ) {
-        //     IERC20(_buyOrder.paymentToken).approve(
-        //         address(troveMarketplace),
-        //         _buyOrder.maxPricePerItem
-        //     );
-        // }
+
         uint256 totalSpent = 0;
         uint256 value = (_buyOrder.paymentToken == address(weth))
             ? (_buyOrder.maxPricePerItem * quantityToBuy)
@@ -218,7 +187,7 @@ abstract contract ABaseTroveSmolSweeper is
                     msg.sender,
                     _buyOrder.tokenId,
                     quantityToBuy,
-                    bytes("")
+                    ""
                 );
             } else revert InvalidNFTAddress();
 
@@ -248,10 +217,10 @@ abstract contract ABaseTroveSmolSweeper is
                 )
             ) revert FirstBuyReverted(errorReason);
             // skip this item
-            return (0, false, SettingsBitFlag.MARKETPLACE_BUY_ITEM_REVERTED);
+            return (0, false, BuyError.BUY_ITEM_REVERTED);
         }
 
-        return (totalSpent, true, SettingsBitFlag.NONE);
+        return (totalSpent, true, BuyError.NONE);
     }
 
     function buyItemsSingleToken(
@@ -315,7 +284,7 @@ abstract contract ABaseTroveSmolSweeper is
             (
                 uint256 spentAmount,
                 bool spentSuccess,
-                uint16 spentError
+                BuyError buyError
             ) = tryBuyItem(
                     _buyOrders[i],
                     _inputSettingsBitFlag,
@@ -327,11 +296,10 @@ abstract contract ABaseTroveSmolSweeper is
                 successCount++;
             } else {
                 if (
-                    spentError ==
-                    SettingsBitFlag.MAX_SPEND_ALLOWANCE_EXCEEDED &&
+                    buyError == BuyError.EXCEEDING_MAX_SPEND &&
                     SettingsBitFlag.checkSetting(
                         _inputSettingsBitFlag,
-                        SettingsBitFlag.MAX_SPEND_ALLOWANCE_EXCEEDED
+                        SettingsBitFlag.EXCEEDING_MAX_SPEND
                     )
                 ) break;
             }
@@ -342,7 +310,7 @@ abstract contract ABaseTroveSmolSweeper is
         }
     }
 
-    function buyItemsManyTokens(
+    function buyItemsMultiTokens(
         BuyItemParams[] calldata _buyOrders,
         uint16 _inputSettingsBitFlag,
         address[] calldata _inputTokenAddresses,
@@ -377,7 +345,7 @@ abstract contract ABaseTroveSmolSweeper is
         (
             uint256[] memory totalSpentAmount,
             uint256 successCount
-        ) = _buyItemsManyTokens(
+        ) = _buyItemsMultiTokens(
                 _buyOrders,
                 _inputSettingsBitFlag,
                 _inputTokenAddresses,
@@ -411,7 +379,7 @@ abstract contract ABaseTroveSmolSweeper is
         }
     }
 
-    function _buyItemsManyTokens(
+    function _buyItemsMultiTokens(
         BuyItemParams[] memory _buyOrders,
         uint16 _inputSettingsBitFlag,
         address[] memory _inputTokenAddresses,
@@ -430,7 +398,7 @@ abstract contract ABaseTroveSmolSweeper is
             (
                 uint256 spentAmount,
                 bool spentSuccess,
-                uint16 spentError
+                BuyError buyError
             ) = tryBuyItem(
                     _buyOrders[i],
                     _inputSettingsBitFlag,
@@ -442,11 +410,10 @@ abstract contract ABaseTroveSmolSweeper is
                 successCount++;
             } else {
                 if (
-                    spentError ==
-                    SettingsBitFlag.MAX_SPEND_ALLOWANCE_EXCEEDED &&
+                    buyError == BuyError.EXCEEDING_MAX_SPEND &&
                     SettingsBitFlag.checkSetting(
                         _inputSettingsBitFlag,
-                        SettingsBitFlag.MAX_SPEND_ALLOWANCE_EXCEEDED
+                        SettingsBitFlag.EXCEEDING_MAX_SPEND
                     )
                 ) break;
             }
@@ -535,7 +502,7 @@ abstract contract ABaseTroveSmolSweeper is
             (
                 uint256 spentAmount,
                 bool spentSuccess,
-                uint16 spentError
+                BuyError buyError
             ) = tryBuyItem(
                     _buyOrders[i],
                     _inputSettingsBitFlag,
@@ -547,11 +514,10 @@ abstract contract ABaseTroveSmolSweeper is
                 successCount++;
             } else {
                 if (
-                    spentError ==
-                    SettingsBitFlag.MAX_SPEND_ALLOWANCE_EXCEEDED &&
+                    buyError == BuyError.EXCEEDING_MAX_SPEND &&
                     SettingsBitFlag.checkSetting(
                         _inputSettingsBitFlag,
-                        SettingsBitFlag.MAX_SPEND_ALLOWANCE_EXCEEDED
+                        SettingsBitFlag.EXCEEDING_MAX_SPEND
                     )
                 ) break;
                 failCount++;
@@ -563,7 +529,7 @@ abstract contract ABaseTroveSmolSweeper is
         }
     }
 
-    function sweepItemsManyTokens(
+    function sweepItemsMultiTokens(
         BuyItemParams[] calldata _buyOrders,
         uint16 _inputSettingsBitFlag,
         address[] calldata _inputTokenAddresses,
@@ -603,7 +569,7 @@ abstract contract ABaseTroveSmolSweeper is
             uint256[] memory totalSpentAmount,
             uint256 successCount,
 
-        ) = _sweepItemsManyTokens(
+        ) = _sweepItemsMultiTokens(
                 _buyOrders,
                 _inputSettingsBitFlag,
                 _inputTokenAddresses,
@@ -639,7 +605,7 @@ abstract contract ABaseTroveSmolSweeper is
         }
     }
 
-    function _sweepItemsManyTokens(
+    function _sweepItemsMultiTokens(
         BuyItemParams[] memory _buyOrders,
         uint16 _inputSettingsBitFlag,
         address[] memory _inputTokenAddresses,
@@ -671,7 +637,7 @@ abstract contract ABaseTroveSmolSweeper is
             (
                 uint256 spentAmount,
                 bool spentSuccess,
-                uint16 spentError
+                BuyError buyError
             ) = tryBuyItem(
                     _buyOrders[i],
                     _inputSettingsBitFlag,
@@ -683,11 +649,10 @@ abstract contract ABaseTroveSmolSweeper is
                 successCount++;
             } else {
                 if (
-                    spentError ==
-                    SettingsBitFlag.MAX_SPEND_ALLOWANCE_EXCEEDED &&
+                    buyError == BuyError.EXCEEDING_MAX_SPEND &&
                     SettingsBitFlag.checkSetting(
                         _inputSettingsBitFlag,
-                        SettingsBitFlag.MAX_SPEND_ALLOWANCE_EXCEEDED
+                        SettingsBitFlag.EXCEEDING_MAX_SPEND
                     )
                 ) break;
                 failCount++;

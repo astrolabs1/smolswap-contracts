@@ -52,7 +52,7 @@ interface ITroveSmolSweeper {
         uint256 _maxSpendIncFees
     ) external payable;
 
-    function buyItemsManyTokens(
+    function buyItemsMultiTokens(
         BuyItemParams[] calldata _buyOrders,
         uint16 _inputSettingsBitFlag,
         address[] calldata _inputTokenAddresses,
@@ -69,7 +69,7 @@ interface ITroveSmolSweeper {
         uint32 _maxFailures
     ) external payable;
 
-    function sweepItemsManyTokens(
+    function sweepItemsMultiTokens(
         BuyItemParams[] calldata _buyOrders,
         uint16 _inputSettingsBitFlag,
         address[] calldata _inputTokenAddresses,

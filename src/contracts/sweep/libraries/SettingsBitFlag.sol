@@ -12,7 +12,7 @@ library SettingsBitFlag {
 
     // if marketplace fails to buy an item for some reason
     // default: will skip the item.
-    // if 0x04 is set, will revert the buy transaction.
+    // if 0x04 is set, will revert the entire buy transaction.
     uint16 internal constant MARKETPLACE_BUY_ITEM_REVERTED = 0x0001;
 
     // if the quantity of an item is less than the requested quantity (for ERC1155)
@@ -23,7 +23,7 @@ library SettingsBitFlag {
     // if total spend allowance is exceeded
     // default: will skip the item and continue.
     // if 0x08 is set, will skill the item and stop the transaction.
-    uint16 internal constant MAX_SPEND_ALLOWANCE_EXCEEDED = 0x0004;
+    uint16 internal constant EXCEEDING_MAX_SPEND = 0x0004;
 
     // refund in the input token
     // default: refunds in the payment token

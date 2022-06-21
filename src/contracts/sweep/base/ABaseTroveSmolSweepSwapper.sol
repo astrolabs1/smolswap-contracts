@@ -164,7 +164,7 @@ contract ABaseTroveSmolSweepSwapper is ABaseTroveSmolSweeper, ABaseSwapper {
             (
                 uint256[] memory totalSpentAmounts2,
                 uint256 successCount
-            ) = _buyItemsManyTokens(
+            ) = _buyItemsMultiTokens(
                     _buyOrders,
                     _inputSettingsBitFlag,
                     inputTokens,
@@ -330,7 +330,7 @@ contract ABaseTroveSmolSweepSwapper is ABaseTroveSmolSweeper, ABaseSwapper {
                 uint256[] memory totalSpentAmounts2,
                 uint256 successCount,
 
-            ) = _sweepItemsManyTokens(
+            ) = _sweepItemsMultiTokens(
                     _buyOrders,
                     _inputSettingsBitFlag,
                     inputTokens,

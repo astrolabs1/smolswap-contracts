@@ -148,7 +148,7 @@ abstract contract ABaseTreasureSmolSweeper is
         // check if total price is less than max spend allowance left
         if ((listing.pricePerItem * quantityToBuy) > _maxSpendAllowanceLeft) {
             // skip this item
-            return (0, false, SettingsBitFlag.MAX_SPEND_ALLOWANCE_EXCEEDED);
+            return (0, false, SettingsBitFlag.EXCEEDING_MAX_SPEND);
         }
 
         uint256 totalSpent = 0;
@@ -287,10 +287,10 @@ abstract contract ABaseTreasureSmolSweeper is
             } else {
                 if (
                     spentError ==
-                    SettingsBitFlag.MAX_SPEND_ALLOWANCE_EXCEEDED &&
+                    SettingsBitFlag.EXCEEDING_MAX_SPEND &&
                     SettingsBitFlag.checkSetting(
                         _inputSettingsBitFlag,
-                        SettingsBitFlag.MAX_SPEND_ALLOWANCE_EXCEEDED
+                        SettingsBitFlag.EXCEEDING_MAX_SPEND
                     )
                 ) break;
             }
@@ -366,10 +366,10 @@ abstract contract ABaseTreasureSmolSweeper is
             } else {
                 if (
                     spentError ==
-                    SettingsBitFlag.MAX_SPEND_ALLOWANCE_EXCEEDED &&
+                    SettingsBitFlag.EXCEEDING_MAX_SPEND &&
                     SettingsBitFlag.checkSetting(
                         _inputSettingsBitFlag,
-                        SettingsBitFlag.MAX_SPEND_ALLOWANCE_EXCEEDED
+                        SettingsBitFlag.EXCEEDING_MAX_SPEND
                     )
                 ) break;
                 failCount++;

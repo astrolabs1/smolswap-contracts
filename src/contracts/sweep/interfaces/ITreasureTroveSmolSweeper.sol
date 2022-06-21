@@ -59,7 +59,7 @@ interface ITreasureTroveSmolSweeper {
         uint256 _maxSpendIncFees
     ) external payable;
 
-    function buyItemsManyTokens(
+    function buyItemsMultiTokens(
         BuyItemParams[] calldata _buyOrders,
         Marketplace[] calldata _marketplaces,
         uint16 _inputSettingsBitFlag,
@@ -78,7 +78,7 @@ interface ITreasureTroveSmolSweeper {
     //     uint32 _maxFailures
     // ) external payable;
 
-    // function sweepItemsManyTokens(
+    // function sweepItemsMultiTokens(
     //     BuyItemParams[] calldata _buyOrders,
     //     Marketplace[] calldata _marketplaces,
     //     uint16 _inputSettingsBitFlag,

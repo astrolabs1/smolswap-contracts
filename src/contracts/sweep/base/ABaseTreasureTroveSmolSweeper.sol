@@ -151,7 +151,7 @@ abstract contract ABaseTreasureTroveSmolSweeper is
         // check if total price is less than max spend allowance left
         if ((listing.pricePerItem * quantityToBuy) > _maxSpendAllowanceLeft) {
             // skip this item
-            return (0, false, SettingsBitFlag.MAX_SPEND_ALLOWANCE_EXCEEDED);
+            return (0, false, SettingsBitFlag.EXCEEDING_MAX_SPEND);
         }
 
         uint256 totalSpent = 0;
@@ -282,7 +282,7 @@ abstract contract ABaseTreasureTroveSmolSweeper is
         // check if total price is less than max spend allowance left
         if ((listing.pricePerItem * quantityToBuy) > _maxSpendAllowanceLeft) {
             // skip this item
-            return (0, false, SettingsBitFlag.MAX_SPEND_ALLOWANCE_EXCEEDED);
+            return (0, false, SettingsBitFlag.EXCEEDING_MAX_SPEND);
         }
 
         BuyItemParams[] memory buyItemParams = new BuyItemParams[](1);
@@ -425,10 +425,10 @@ abstract contract ABaseTreasureTroveSmolSweeper is
             } else {
                 if (
                     spentError ==
-                    SettingsBitFlag.MAX_SPEND_ALLOWANCE_EXCEEDED &&
+                    SettingsBitFlag.EXCEEDING_MAX_SPEND &&
                     SettingsBitFlag.checkSetting(
                         _inputSettingsBitFlag,
-                        SettingsBitFlag.MAX_SPEND_ALLOWANCE_EXCEEDED
+                        SettingsBitFlag.EXCEEDING_MAX_SPEND
                     )
                 ) break;
             }
@@ -501,10 +501,10 @@ abstract contract ABaseTreasureTroveSmolSweeper is
             } else {
                 if (
                     spentError ==
-                    SettingsBitFlag.MAX_SPEND_ALLOWANCE_EXCEEDED &&
+                    SettingsBitFlag.EXCEEDING_MAX_SPEND &&
                     SettingsBitFlag.checkSetting(
                         _inputSettingsBitFlag,
-                        SettingsBitFlag.MAX_SPEND_ALLOWANCE_EXCEEDED
+                        SettingsBitFlag.EXCEEDING_MAX_SPEND
                     )
                 ) break;
                 failCount++;
@@ -589,10 +589,10 @@ abstract contract ABaseTreasureTroveSmolSweeper is
             } else {
                 if (
                     spentError ==
-                    SettingsBitFlag.MAX_SPEND_ALLOWANCE_EXCEEDED &&
+                    SettingsBitFlag.EXCEEDING_MAX_SPEND &&
                     SettingsBitFlag.checkSetting(
                         _inputSettingsBitFlag,
-                        SettingsBitFlag.MAX_SPEND_ALLOWANCE_EXCEEDED
+                        SettingsBitFlag.EXCEEDING_MAX_SPEND
                     )
                 ) break;
             }
@@ -603,7 +603,7 @@ abstract contract ABaseTreasureTroveSmolSweeper is
         }
     }
 
-    function buyItemsManyTokens(
+    function buyItemsMultiTokens(
         BuyItemParams[] calldata _buyOrders,
         Marketplace[] calldata _marketplaces,
         uint16 _inputSettingsBitFlag,
@@ -639,7 +639,7 @@ abstract contract ABaseTreasureTroveSmolSweeper is
         (
             uint256[] memory totalSpentAmount,
             uint256 successCount
-        ) = _buyItemsManyTokens(
+        ) = _buyItemsMultiTokens(
                 _buyOrders,
                 _marketplaces,
                 _inputSettingsBitFlag,
@@ -671,7 +671,7 @@ abstract contract ABaseTreasureTroveSmolSweeper is
         }
     }
 
-    function _buyItemsManyTokens(
+    function _buyItemsMultiTokens(
         BuyItemParams[] memory _buyOrders,
         Marketplace[] calldata _marketplaces,
         uint16 _inputSettingsBitFlag,
@@ -704,10 +704,10 @@ abstract contract ABaseTreasureTroveSmolSweeper is
             } else {
                 if (
                     spentError ==
-                    SettingsBitFlag.MAX_SPEND_ALLOWANCE_EXCEEDED &&
+                    SettingsBitFlag.EXCEEDING_MAX_SPEND &&
                     SettingsBitFlag.checkSetting(
                         _inputSettingsBitFlag,
-                        SettingsBitFlag.MAX_SPEND_ALLOWANCE_EXCEEDED
+                        SettingsBitFlag.EXCEEDING_MAX_SPEND
                     )
                 ) break;
             }
@@ -812,10 +812,10 @@ abstract contract ABaseTreasureTroveSmolSweeper is
     //         } else {
     //             if (
     //                 spentError ==
-    //                 SettingsBitFlag.MAX_SPEND_ALLOWANCE_EXCEEDED &&
+    //                 SettingsBitFlag.EXCEEDING_MAX_SPEND &&
     //                 SettingsBitFlag.checkSetting(
     //                     _inputSettingsBitFlag,
-    //                     SettingsBitFlag.MAX_SPEND_ALLOWANCE_EXCEEDED
+    //                     SettingsBitFlag.EXCEEDING_MAX_SPEND
     //                 )
     //             ) break;
     //             failCount++;
@@ -851,7 +851,7 @@ abstract contract ABaseTreasureTroveSmolSweeper is
     //     }
     // }
 
-    // function sweepItemsManyTokens(
+    // function sweepItemsMultiTokens(
     //     BuyItemParams[] calldata _buyOrders,
     //     Marketplace[] calldata _marketplaces,
     //     uint16 _inputSettingsBitFlag,
@@ -894,7 +894,7 @@ abstract contract ABaseTreasureTroveSmolSweeper is
     //         uint256[] memory totalSpentAmount,
     //         uint256 successCount,
 
-    //     ) = _sweepItemsManyTokens(
+    //     ) = _sweepItemsMultiTokens(
     //             _buyOrders,
     //             _marketplaces,
     //             _inputSettingsBitFlag,
@@ -928,7 +928,7 @@ abstract contract ABaseTreasureTroveSmolSweeper is
     //     }
     // }
 
-    // function _sweepItemsManyTokens(
+    // function _sweepItemsMultiTokens(
     //     BuyItemParams[] memory _buyOrders,
     //     Marketplace[] memory _marketplaces,
     //     uint16 _inputSettingsBitFlag,
@@ -987,10 +987,10 @@ abstract contract ABaseTreasureTroveSmolSweeper is
     //         } else {
     //             if (
     //                 spentError ==
-    //                 SettingsBitFlag.MAX_SPEND_ALLOWANCE_EXCEEDED &&
+    //                 SettingsBitFlag.EXCEEDING_MAX_SPEND &&
     //                 SettingsBitFlag.checkSetting(
     //                     _inputSettingsBitFlag,
-    //                     SettingsBitFlag.MAX_SPEND_ALLOWANCE_EXCEEDED
+    //                     SettingsBitFlag.EXCEEDING_MAX_SPEND
     //                 )
     //             ) break;
     //             failCount++;
