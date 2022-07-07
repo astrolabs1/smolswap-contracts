@@ -1,5 +1,4 @@
-@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/
-openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/
+@openzeppelin-contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/
 @openzeppelin/=lib/openzeppelin-contracts/
 ds-test/=lib/ds-test/src/
 @contracts/=src/contracts/

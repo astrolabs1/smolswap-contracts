@@ -23,12 +23,33 @@ pragma solidity ^0.8.14;
 //         \::/    /                \::/    /                 ~~                      \::/    /        \::/    /                \::/____/                \::/    /
 //          \/____/                  \/____/                                           \/____/          \/____/                  ~~                       \/____/
 
-import "./base/ABaseTroveSmolSweeper.sol";
+import "./upgradeable/ABaseTroveSmolSweeper.sol";
+import "@openzeppelin-contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-contract TroveSmolSweeper is ABaseTroveSmolSweeper {
-    constructor(
+contract TroveSmolSweeper is
+    Initializable,
+    ABaseTroveSmolSweeper,
+    UUPSUpgradeable
+{
+    // constructor() {
+    //     _disableInitializers();
+    // }
+
+    function initialize(
         address _troveMarketplace,
         address _defaultPaymentToken,
         address _weth
-    ) ABaseTroveSmolSweeper(_troveMarketplace, _defaultPaymentToken, _weth) {}
+    ) public initializer {
+        __Ownable_init();
+        __SmolSweeper_init(_troveMarketplace, _defaultPaymentToken, _weth);
+        __UUPSUpgradeable_init();
+    }
+
+    function _authorizeUpgrade(address newImplementation)
+        internal
+        override
+    onlyOwner
+    {
+
+    }
 }

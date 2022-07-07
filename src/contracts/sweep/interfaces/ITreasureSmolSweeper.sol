@@ -45,6 +45,8 @@ interface ITreasureSmolSweeper {
         bytes _errorReason
     );
 
+    event refundToken(address tokenAddress, uint256 amount);
+
     function buyUsingPaymentToken(
         BuyOrder[] memory _buyOrders,
         uint16 _inputSettingsBitFlag,

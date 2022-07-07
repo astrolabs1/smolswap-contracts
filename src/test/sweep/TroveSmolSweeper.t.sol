@@ -12,7 +12,7 @@ import "@contracts/weth/WETH9.sol";
 import "@contracts/assets/erc721/NFTERC721.sol";
 import "@contracts/assets/erc1155/NFTERC1155.sol";
 
-contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
+contract TroveSmolSweeperTest is DSTest, AERC721Receiver {
     ICheatCodes public constant CHEATCODES = ICheatCodes(HEVM_ADDRESS);
 
     TroveSmolSweeper public smolsweep;
@@ -67,11 +67,9 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
         //     address(magic)
         // );
 
-        smolsweep = new TroveSmolSweeper(
-            address(trove),
-            address(magic),
-            address(weth)
-        );
+        smolsweep = new TroveSmolSweeper();
+
+        smolsweep.initialize(address(trove), address(magic), address(weth));
     }
 
     function test_owner() public {

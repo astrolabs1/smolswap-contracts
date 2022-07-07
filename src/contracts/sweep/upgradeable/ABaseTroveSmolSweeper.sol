@@ -39,11 +39,16 @@ import "./ABaseSmolSweeper.sol";
 import "../errors/BuyError.sol";
 
 // import "@utils/console.sol";
+import "@openzeppelin-contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "@openzeppelin-contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin-contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin-contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 error InvalidMsgValue();
 error MsgValueShouldBeZero();
 
-abstract contract ABaseTroveSmolSweeper is
+contract ABaseTroveSmolSweeper is
+    Initializable,
     ABaseSmolSweeper,
     ITroveSmolSweeper
 {
@@ -56,11 +61,12 @@ abstract contract ABaseTroveSmolSweeper is
     IERC20 public weth;
     ITroveMarketplace public troveMarketplace;
 
-    constructor(
+    function __SmolSweeper_init(
         address _troveMarketplace,
         address _defaultPaymentToken,
         address _weth
-    ) {
+    ) internal {
+        // Initialize the base class
         troveMarketplace = ITroveMarketplace(_troveMarketplace);
         defaultPaymentToken = IERC20(_defaultPaymentToken);
         weth = IERC20(_weth);
