@@ -11,7 +11,9 @@ remappings = [
     '@openzeppelin/=lib/openzeppelin-contracts/',
     'ds-test/=lib/ds-test/src/',
     'openzeppelin-contracts/=lib/openzeppelin-contracts/',
+    '@forge-std/=lib/forge-std'
 ]
+ffi = true
 optimizer = false
 # optimizer = true
 # optimizer_runs = 100
@@ -24,6 +26,7 @@ out = 'bout'                   # output directory conflicts with dapptools
 libs = ['lib', "node_modules"]
 auto_detect_solc = true
 # solc_version = '0.8.14'
+ffi = true
 remappings = [
     '@utils/=src/utils/',
     '@openzeppelin-contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/',
@@ -31,6 +34,7 @@ remappings = [
     '@openzeppelin/=lib/openzeppelin-contracts/',
     'ds-test/=lib/ds-test/src/',
     'openzeppelin-contracts/=lib/openzeppelin-contracts/',
+    '@forge-std/=lib/forge-std'
 ]
 optimizer = false
 optimizer_runs = 10

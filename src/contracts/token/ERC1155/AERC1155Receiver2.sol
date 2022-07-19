@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.11;
-import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 
-abstract contract AERC1155Receiver is IERC1155Receiver {
+abstract contract AERC1155Receiver2 {
     /**
      * Always returns `IERC1155Receiver.onERC1155ReceivedFrom.selector`.
      */
@@ -12,7 +11,7 @@ abstract contract AERC1155Receiver is IERC1155Receiver {
         uint256,
         uint256,
         bytes calldata
-    ) public virtual override returns (bytes4) {
+    ) public virtual returns (bytes4) {
         return this.onERC1155Received.selector;
     }
 
@@ -25,7 +24,7 @@ abstract contract AERC1155Receiver is IERC1155Receiver {
         uint256[] calldata,
         uint256[] calldata,
         bytes calldata
-    ) public virtual override returns (bytes4) {
+    ) public virtual returns (bytes4) {
         return this.onERC1155BatchReceived.selector;
     }
 }

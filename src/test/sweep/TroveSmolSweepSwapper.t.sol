@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.14;
 
-import "ds-test/test.sol";
-import "@utils/console.sol";
-import "@cheatcodes/interfaces/ICheatCodes.sol";
-import "@contracts/sweep/TroveSmolSweepSwapper.sol";
+// import "ds-test/test.sol";
+// import "@utils/console.sol";
+// import "@cheatcodes/interfaces/ICheatCodes.sol";
+// import "@contracts/sweep/TroveSmolSweepSwapper.sol";
 
-import "@contracts/treasure/trove/TroveMarketplace.sol";
-import "@contracts/treasure/assets/magic-token/Magic.sol";
-import "@contracts/weth/WETH9.sol";
-import "@contracts/assets/erc721/NFTERC721.sol";
-import "@contracts/assets/erc1155/NFTERC1155.sol";
+// import "@contracts/treasure/trove/TroveMarketplace.sol";
+// import "@contracts/treasure/assets/magic-token/Magic.sol";
+// import "@contracts/weth/WETH9.sol";
+// import "@contracts/assets/erc721/NFTERC721.sol";
+// import "@contracts/assets/erc1155/NFTERC1155.sol";
 
 // contract TroveSmolSweepSwapperTest is DSTest {
 //     ICheatCodes public constant CHEATCODES = ICheatCodes(HEVM_ADDRESS);

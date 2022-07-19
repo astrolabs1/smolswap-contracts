@@ -24,9 +24,13 @@ pragma solidity ^0.8.14;
 //          \/____/                  \/____/                                           \/____/          \/____/                  ~~                       \/____/
 
 struct BuyOrder {
-    address assetAddress;
-    uint256 tokenId;
-    address seller;
-    uint256 quantity;
-    uint256 maxPricePerItem;
+  address assetAddress;
+  uint256 tokenId;
+  address payable seller;
+  uint256 quantity;
+  uint256 price;
+  uint256 createdAtBlockNumber;
+  uint64 startTime;
+  uint64 expiration;
+  uint8 marketplaceId;
 }

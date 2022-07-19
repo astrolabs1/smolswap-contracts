@@ -6,3 +6,4 @@ ds-test/=lib/ds-test/src/
 @cheatcodes/=src/cheatcodes/
 @uniswap/=node_modules/@uniswap/
 @utils/=src/utils
+@forge-std/=lib/forge-std

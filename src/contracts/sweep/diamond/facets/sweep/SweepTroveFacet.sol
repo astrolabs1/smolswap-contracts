@@ -1,95 +1,31 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.14;
 
-//           _____                    _____                   _______                   _____            _____                    _____                    _____                    _____
-//          /\    \                  /\    \                 /::\    \                 /\    \          /\    \                  /\    \                  /\    \                  /\    \
-//         /::\    \                /::\____\               /::::\    \               /::\____\        /::\    \                /::\____\                /::\    \                /::\    \
-//        /::::\    \              /::::|   |              /::::::\    \             /:::/    /       /::::\    \              /:::/    /               /::::\    \              /::::\    \
-//       /::::::\    \            /:::::|   |             /::::::::\    \           /:::/    /       /::::::\    \            /:::/   _/___            /::::::\    \            /::::::\    \
-//      /:::/\:::\    \          /::::::|   |            /:::/~~\:::\    \         /:::/    /       /:::/\:::\    \          /:::/   /\    \          /:::/\:::\    \          /:::/\:::\    \
-//     /:::/__\:::\    \        /:::/|::|   |           /:::/    \:::\    \       /:::/    /       /:::/__\:::\    \        /:::/   /::\____\        /:::/__\:::\    \        /:::/__\:::\    \
-//     \:::\   \:::\    \      /:::/ |::|   |          /:::/    / \:::\    \     /:::/    /        \:::\   \:::\    \      /:::/   /:::/    /       /::::\   \:::\    \      /::::\   \:::\    \
-//   ___\:::\   \:::\    \    /:::/  |::|___|______   /:::/____/   \:::\____\   /:::/    /       ___\:::\   \:::\    \    /:::/   /:::/   _/___    /::::::\   \:::\    \    /::::::\   \:::\    \
-//  /\   \:::\   \:::\    \  /:::/   |::::::::\    \ |:::|    |     |:::|    | /:::/    /       /\   \:::\   \:::\    \  /:::/___/:::/   /\    \  /:::/\:::\   \:::\    \  /:::/\:::\   \:::\____\
-// /::\   \:::\   \:::\____\/:::/    |:::::::::\____\|:::|____|     |:::|    |/:::/____/       /::\   \:::\   \:::\____\|:::|   /:::/   /::\____\/:::/  \:::\   \:::\____\/:::/  \:::\   \:::|    |
-// \:::\   \:::\   \::/    /\::/    / ~~~~~/:::/    / \:::\    \   /:::/    / \:::\    \       \:::\   \:::\   \::/    /|:::|__/:::/   /:::/    /\::/    \:::\  /:::/    /\::/    \:::\  /:::|____|
-//  \:::\   \:::\   \/____/  \/____/      /:::/    /   \:::\    \ /:::/    /   \:::\    \       \:::\   \:::\   \/____/  \:::\/:::/   /:::/    /  \/____/ \:::\/:::/    /  \/_____/\:::\/:::/    /
-//   \:::\   \:::\    \                  /:::/    /     \:::\    /:::/    /     \:::\    \       \:::\   \:::\    \       \::::::/   /:::/    /            \::::::/    /            \::::::/    /
-//    \:::\   \:::\____\                /:::/    /       \:::\__/:::/    /       \:::\    \       \:::\   \:::\____\       \::::/___/:::/    /              \::::/    /              \::::/    /
-//     \:::\  /:::/    /               /:::/    /         \::::::::/    /         \:::\    \       \:::\  /:::/    /        \:::\__/:::/    /               /:::/    /                \::/____/
-//      \:::\/:::/    /               /:::/    /           \::::::/    /           \:::\    \       \:::\/:::/    /          \::::::::/    /               /:::/    /                  ~~
-//       \::::::/    /               /:::/    /             \::::/    /             \:::\    \       \::::::/    /            \::::::/    /               /:::/    /
-//        \::::/    /               /:::/    /               \::/____/               \:::\____\       \::::/    /              \::::/    /               /:::/    /
-//         \::/    /                \::/    /                 ~~                      \::/    /        \::/    /                \::/____/                \::/    /
-//          \/____/                  \/____/                                           \/____/          \/____/                  ~~                       \/____/
-
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-import "../../token/ANFTReceiver.sol";
-import "../libraries/SettingsBitFlag.sol";
-import "../libraries/Math.sol";
-import "../../treasure/interfaces/ITroveMarketplace.sol";
-import "../structs/BuyOrder.sol";
-import "../interfaces/ITroveSmolSweeper.sol";
-import "./ABaseSmolSweeper.sol";
+import "../../libraries/LibSweep.sol";
+import "../OwnershipFacet.sol";
 
-import "../errors/BuyError.sol";
+import "../../../../token/ANFTReceiver.sol";
+import "../../../libraries/SettingsBitFlag.sol";
+import "../../../libraries/Math.sol";
+import "../../../../treasure/interfaces/ITroveMarketplace.sol";
+import "../../../interfaces/ITroveSmolSweeper.sol";
+import "../../../errors/BuyError.sol";
 
-// import "@utils/console.sol";
+import "./ABaseSweeperFacet.sol";
 
-error InvalidMsgValue();
-error MsgValueShouldBeZero();
-
-abstract contract ABaseTroveSmolSweeper is ABaseSmolSweeper, ITroveSmolSweeper {
+contract SweepTroveFacet is
+  OwnershipModifers,
+  ITroveSmolSweeper,
+  ABaseSweeperFacet
+{
   using SafeERC20 for IERC20;
 
-  bytes4 private constant INTERFACE_ID_ERC721 = 0x80ac58cd;
-  bytes4 private constant INTERFACE_ID_ERC1155 = 0xd9b67a26;
-
-  IERC20 public defaultPaymentToken;
-  IERC20 public weth;
-  ITroveMarketplace public troveMarketplace;
-
-  constructor(
-    address _troveMarketplace,
-    address _defaultPaymentToken,
-    address _weth
-  ) {
-    troveMarketplace = ITroveMarketplace(_troveMarketplace);
-    defaultPaymentToken = IERC20(_defaultPaymentToken);
-    weth = IERC20(_weth);
-  }
-
-  function setMarketplaceContract(ITroveMarketplace _troveMarketplace)
-    external
-    onlyOwner
-  {
-    troveMarketplace = _troveMarketplace;
-  }
-
-  function setDefaultPaymentToken(IERC20 _defaultPaymentToken)
-    external
-    onlyOwner
-  {
-    defaultPaymentToken = _defaultPaymentToken;
-  }
-
-  function setWeth(IERC20 _weth) external onlyOwner {
-    weth = _weth;
-  }
-
-  function sumTotalPrice(BuyOrder[] memory _buyOrders)
-    internal
-    pure
-    returns (uint256 totalPrice)
-  {
-    for (uint256 i = 0; i < _buyOrders.length; i++) {
-      totalPrice += _buyOrders[i].quantity * _buyOrders[i].price;
-    }
-  }
+  constructor() ABaseSweeperFacet() {}
 
   function tryBuyItem(
     BuyItemParams memory _buyOrder,
@@ -104,12 +40,12 @@ abstract contract ABaseTroveSmolSweeper is ABaseSmolSweeper, ITroveSmolSweeper {
     )
   {
     uint256 quantityToBuy = _buyOrder.quantity;
+    // ITroveMarketplace marketplace = LibSweep.diamondStorage().troveMarketplace;
     // check if the listing exists
-    ITroveMarketplace.ListingOrBid memory listing = troveMarketplace.listings(
-      _buyOrder.nftAddress,
-      _buyOrder.tokenId,
-      _buyOrder.owner
-    );
+    ITroveMarketplace.ListingOrBid memory listing = LibSweep
+      .diamondStorage()
+      .troveMarketplace
+      .listings(_buyOrder.nftAddress, _buyOrder.tokenId, _buyOrder.owner);
 
     // // check if the price is correct
     // if (listing.pricePerItem > _buyOrder.maxPricePerItem) {
@@ -142,11 +78,16 @@ abstract contract ABaseTroveSmolSweeper is ABaseSmolSweeper, ITroveSmolSweeper {
     buyItemParams[0] = _buyOrder;
 
     uint256 totalSpent = 0;
-    uint256 value = (_buyOrder.paymentToken == address(weth))
+    uint256 value = (_buyOrder.paymentToken ==
+      address(LibSweep.diamondStorage().weth))
       ? (_buyOrder.maxPricePerItem * quantityToBuy)
       : 0;
 
-    try troveMarketplace.buyItems{value: value}(buyItemParams) {
+    try
+      LibSweep.diamondStorage().troveMarketplace.buyItems{value: value}(
+        buyItemParams
+      )
+    {
       if (
         SettingsBitFlag.checkSetting(
           _inputSettingsBitFlag,
@@ -164,7 +105,9 @@ abstract contract ABaseTroveSmolSweeper is ABaseSmolSweeper, ITroveSmolSweeper {
       }
 
       if (
-        IERC165(_buyOrder.nftAddress).supportsInterface(INTERFACE_ID_ERC721)
+        IERC165(_buyOrder.nftAddress).supportsInterface(
+          LibSweep.INTERFACE_ID_ERC721
+        )
       ) {
         IERC721(_buyOrder.nftAddress).safeTransferFrom(
           address(this),
@@ -172,7 +115,9 @@ abstract contract ABaseTroveSmolSweeper is ABaseSmolSweeper, ITroveSmolSweeper {
           _buyOrder.tokenId
         );
       } else if (
-        IERC165(_buyOrder.nftAddress).supportsInterface(INTERFACE_ID_ERC1155)
+        IERC165(_buyOrder.nftAddress).supportsInterface(
+          LibSweep.INTERFACE_ID_ERC1155
+        )
       ) {
         IERC1155(_buyOrder.nftAddress).safeTransferFrom(
           address(this),
@@ -221,7 +166,10 @@ abstract contract ABaseTroveSmolSweeper is ABaseSmolSweeper, ITroveSmolSweeper {
     address _inputTokenAddress,
     uint256 _maxSpendIncFees
   ) external payable {
-    if (_inputTokenAddress == address(weth) && msg.value > 0) {
+    if (
+      _inputTokenAddress == address(LibSweep.diamondStorage().weth) &&
+      msg.value > 0
+    ) {
       if (_maxSpendIncFees != msg.value) revert InvalidMsgValue();
     } else {
       if (msg.value != 0) revert MsgValueShouldBeZero();
@@ -232,7 +180,7 @@ abstract contract ABaseTroveSmolSweeper is ABaseSmolSweeper, ITroveSmolSweeper {
         _maxSpendIncFees
       );
       IERC20(_inputTokenAddress).approve(
-        address(troveMarketplace),
+        address(LibSweep.diamondStorage().troveMarketplace),
         _maxSpendIncFees
       );
     }
@@ -246,9 +194,12 @@ abstract contract ABaseTroveSmolSweeper is ABaseSmolSweeper, ITroveSmolSweeper {
     // transfer back failed payment tokens to the buyer
     if (successCount == 0) revert AllReverted();
 
-    uint256 feeAmount = _calculateFee(totalSpentAmount);
+    uint256 feeAmount = LibSweep._calculateFee(totalSpentAmount);
 
-    if (_inputTokenAddress == address(weth) && _buyOrders[0].usingEth) {
+    if (
+      _inputTokenAddress == address(LibSweep.diamondStorage().weth) &&
+      _buyOrders[0].usingEth
+    ) {
       payable(msg.sender).transfer(
         _maxSpendIncFees - (totalSpentAmount + feeAmount)
       );
@@ -266,7 +217,9 @@ abstract contract ABaseTroveSmolSweeper is ABaseSmolSweeper, ITroveSmolSweeper {
     uint256 _maxSpendIncFees
   ) internal returns (uint256 totalSpentAmount, uint256 successCount) {
     // buy all assets
-    uint256 _maxSpendIncFees = _calculateAmountWithoutFees(_maxSpendIncFees);
+    uint256 _maxSpendIncFees = LibSweep._calculateAmountWithoutFees(
+      _maxSpendIncFees
+    );
 
     uint256 i = 0;
     uint256 length = _buyOrders.length;
@@ -305,8 +258,12 @@ abstract contract ABaseTroveSmolSweeper is ABaseSmolSweeper, ITroveSmolSweeper {
     // transfer payment tokens to this contract
     uint256 i = 0;
     uint256 length = _inputTokenAddresses.length;
+
     for (; i < length; ) {
-      if (_inputTokenAddresses[i] == address(weth) && msg.value > 0) {
+      if (
+        _inputTokenAddresses[i] == address(LibSweep.diamondStorage().weth) &&
+        msg.value > 0
+      ) {
         if (_maxSpendIncFees[i] != msg.value) revert InvalidMsgValue();
       } else {
         // if (msg.value != 0) revert MsgValueShouldBeZero();
@@ -317,7 +274,7 @@ abstract contract ABaseTroveSmolSweeper is ABaseSmolSweeper, ITroveSmolSweeper {
           _maxSpendIncFees[i]
         );
         IERC20(_inputTokenAddresses[i]).approve(
-          address(troveMarketplace),
+          address(LibSweep.diamondStorage().troveMarketplace),
           _maxSpendIncFees[i]
         );
       }
@@ -343,9 +300,12 @@ abstract contract ABaseTroveSmolSweeper is ABaseSmolSweeper, ITroveSmolSweeper {
 
     i = 0;
     for (; i < length; ) {
-      uint256 feeAmount = _calculateFee(totalSpentAmount[i]);
+      uint256 feeAmount = LibSweep._calculateFee(totalSpentAmount[i]);
 
-      if (_inputTokenAddresses[i] == address(weth) && _buyOrders[0].usingEth) {
+      if (
+        _inputTokenAddresses[i] == address(LibSweep.diamondStorage().weth) &&
+        _buyOrders[0].usingEth
+      ) {
         payable(msg.sender).transfer(
           _maxSpendIncFees[i] - (totalSpentAmount[i] + feeAmount)
         );
@@ -411,7 +371,10 @@ abstract contract ABaseTroveSmolSweeper is ABaseSmolSweeper, ITroveSmolSweeper {
     uint32 _maxSuccesses,
     uint32 _maxFailures
   ) external payable {
-    if (_inputTokenAddress == address(weth) && msg.value > 0) {
+    if (
+      _inputTokenAddress == address(LibSweep.diamondStorage().weth) &&
+      msg.value > 0
+    ) {
       if (_maxSpendIncFees != msg.value) revert InvalidMsgValue();
     } else {
       if (msg.value != 0) revert MsgValueShouldBeZero();
@@ -422,7 +385,7 @@ abstract contract ABaseTroveSmolSweeper is ABaseSmolSweeper, ITroveSmolSweeper {
         _maxSpendIncFees
       );
       IERC20(_inputTokenAddress).approve(
-        address(troveMarketplace),
+        address(LibSweep.diamondStorage().troveMarketplace),
         _maxSpendIncFees
       );
     }
@@ -439,8 +402,11 @@ abstract contract ABaseTroveSmolSweeper is ABaseSmolSweeper, ITroveSmolSweeper {
     // transfer back failed payment tokens to the buyer
     if (successCount == 0) revert AllReverted();
 
-    uint256 feeAmount = _calculateFee(totalSpentAmount);
-    if (_inputTokenAddress == address(weth) && _buyOrders[0].usingEth) {
+    uint256 feeAmount = LibSweep._calculateFee(totalSpentAmount);
+    if (
+      _inputTokenAddress == address(LibSweep.diamondStorage().weth) &&
+      _buyOrders[0].usingEth
+    ) {
       payable(msg.sender).transfer(
         _maxSpendIncFees - (totalSpentAmount + feeAmount)
       );
@@ -510,7 +476,10 @@ abstract contract ABaseTroveSmolSweeper is ABaseSmolSweeper, ITroveSmolSweeper {
   ) external payable {
     // transfer payment tokens to this contract
     for (uint256 i = 0; i < _maxSpendIncFees.length; ) {
-      if (_inputTokenAddresses[i] == address(weth) && msg.value > 0) {
+      if (
+        _inputTokenAddresses[i] == address(LibSweep.diamondStorage().weth) &&
+        msg.value > 0
+      ) {
         if (_maxSpendIncFees[i] != msg.value) revert InvalidMsgValue();
       } else {
         // if (msg.value != 0) revert MsgValueShouldBeZero();
@@ -521,7 +490,7 @@ abstract contract ABaseTroveSmolSweeper is ABaseSmolSweeper, ITroveSmolSweeper {
           _maxSpendIncFees[i]
         );
         IERC20(_inputTokenAddresses[i]).approve(
-          address(troveMarketplace),
+          address(LibSweep.diamondStorage().troveMarketplace),
           _maxSpendIncFees[i]
         );
       }
@@ -553,9 +522,12 @@ abstract contract ABaseTroveSmolSweeper is ABaseSmolSweeper, ITroveSmolSweeper {
     if (successCount == 0) revert AllReverted();
 
     for (uint256 i = 0; i < _maxSpendIncFees.length; ) {
-      uint256 feeAmount = _calculateFee(totalSpentAmount[i]);
+      uint256 feeAmount = LibSweep._calculateFee(totalSpentAmount[i]);
 
-      if (_inputTokenAddresses[i] == address(weth) && _buyOrders[0].usingEth) {
+      if (
+        _inputTokenAddresses[i] == address(LibSweep.diamondStorage().weth) &&
+        _buyOrders[0].usingEth
+      ) {
         payable(msg.sender).transfer(
           _maxSpendIncFees[i] - (totalSpentAmount[i] + feeAmount)
         );
@@ -623,38 +595,5 @@ abstract contract ABaseTroveSmolSweeper is ABaseSmolSweeper, ITroveSmolSweeper {
         ++i;
       }
     }
-  }
-
-  function _maxSpendWithoutFees(uint256[] memory _maxSpendIncFees)
-    internal
-    view
-    returns (uint256[] memory maxSpendIncFeesAmount)
-  {
-    maxSpendIncFeesAmount = new uint256[](_maxSpendIncFees.length);
-
-    uint256 maxSpendLength = _maxSpendIncFees.length;
-    for (uint256 i = 0; i < maxSpendLength; ) {
-      maxSpendIncFeesAmount[i] = _calculateAmountWithoutFees(
-        _maxSpendIncFees[i]
-      );
-      unchecked {
-        ++i;
-      }
-    }
-  }
-
-  function _getTokenIndex(
-    address[] memory _inputTokenAddresses,
-    address _buyOrderPaymentToken
-  ) internal returns (uint256 j) {
-    for (; j < _inputTokenAddresses.length; ) {
-      if (_inputTokenAddresses[j] == _buyOrderPaymentToken) {
-        return j;
-      }
-      unchecked {
-        ++j;
-      }
-    }
-    revert("bad");
   }
 }

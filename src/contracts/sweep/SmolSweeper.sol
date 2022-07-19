@@ -23,33 +23,70 @@ pragma solidity ^0.8.14;
 //         \::/    /                \::/    /                 ~~                      \::/    /        \::/    /                \::/____/                \::/    /
 //          \/____/                  \/____/                                           \/____/          \/____/                  ~~                       \/____/
 
-import "./upgradeable/ABaseTroveSmolSweeper.sol";
-import "@openzeppelin-contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 
-contract TroveSmolSweeper is
-    Initializable,
-    ABaseTroveSmolSweeper,
-    UUPSUpgradeable
-{
-    // constructor() {
-    //     _disableInitializers();
-    // }
+import "../token/ANFTReceiver2.sol";
 
-    function initialize(
-        address _troveMarketplace,
-        address _defaultPaymentToken,
-        address _weth
-    ) public initializer {
-        __Ownable_init();
-        __SmolSweeper_init(_troveMarketplace, _defaultPaymentToken, _weth);
-        __UUPSUpgradeable_init();
-    }
+import "./diamond/Diamond.sol";
+import "./diamond/facets/OwnershipFacet.sol";
 
-    function _authorizeUpgrade(address newImplementation)
-        internal
-        override
+contract SmolSweeper is Diamond, ANFTReceiver2, OwnershipModifers {
+  using SafeERC20 for IERC20;
+
+  constructor(address _contractOwner, address _diamondCutFacet)
+    Diamond(_contractOwner, _diamondCutFacet)
+  {}
+
+  function approveERC20TokenToContract(
+    IERC20 _token,
+    address _contract,
+    uint256 _amount
+  ) external onlyOwner {
+    _token.safeApprove(address(_contract), uint256(_amount));
+  }
+
+  // rescue functions
+  // those have not been tested yet
+  function transferETHTo(address payable _to, uint256 _amount)
+    external
     onlyOwner
-    {
+  {
+    _to.transfer(_amount);
+  }
 
-    }
+  function transferERC20TokenTo(
+    IERC20 _token,
+    address _address,
+    uint256 _amount
+  ) external onlyOwner {
+    _token.safeTransfer(address(_address), uint256(_amount));
+  }
+
+  function transferERC721To(
+    IERC721 _token,
+    address _to,
+    uint256 _tokenId
+  ) external onlyOwner {
+    _token.safeTransferFrom(address(this), _to, _tokenId);
+  }
+
+  function transferERC1155To(
+    IERC1155 _token,
+    address _to,
+    uint256[] calldata _tokenIds,
+    uint256[] calldata _amounts,
+    bytes calldata _data
+  ) external onlyOwner {
+    _token.safeBatchTransferFrom(
+      address(this),
+      _to,
+      _tokenIds,
+      _amounts,
+      _data
+    );
+  }
 }
