@@ -20,31 +20,36 @@ import "./ABaseSweeperFacet.sol";
 
 import "../../../structs/BuyOrder.sol";
 
-contract SweepFacet is OwnershipModifers, ISmolSweeper, ABaseSweeperFacet {
+contract SweepFacet is
+  OwnershipModifers,
+  ABaseSweeperFacet
+  // ISmolSweeper,
+{
   using SafeERC20 for IERC20;
 
   function buyItemsSingleToken(
     BuyOrder[] calldata _buyOrders,
-    bytes[] memory _signatures,
+    bytes[] calldata _signatures,
     bool _usingETH,
     uint16 _inputSettingsBitFlag,
     address _paymentToken,
     uint256 _maxSpendIncFees
   ) external payable {
-    if (_usingETH && msg.value > 0) {
+    if (_usingETH) {
       if (_maxSpendIncFees != msg.value) revert InvalidMsgValue();
     } else {
       if (msg.value != 0) revert MsgValueShouldBeZero();
       // transfer payment tokens to this contract
+
       IERC20(_paymentToken).safeTransferFrom(
         msg.sender,
         address(this),
         _maxSpendIncFees
       );
-      IERC20(_paymentToken).approve(
-        address(LibSweep.diamondStorage().troveMarketplace),
-        _maxSpendIncFees
-      );
+      // IERC20(_paymentToken).approve(
+      //   address(LibSweep.diamondStorage().troveMarketplace),
+      //   _maxSpendIncFees
+      // );
     }
     (uint256 totalSpentAmount, uint256 successCount) = _buyItemsSingleToken(
       _buyOrders,
@@ -52,21 +57,19 @@ contract SweepFacet is OwnershipModifers, ISmolSweeper, ABaseSweeperFacet {
       _paymentToken,
       _usingETH,
       _inputSettingsBitFlag,
-      _maxSpendIncFees
+      LibSweep._calculateAmountWithoutFees(_maxSpendIncFees)
     );
     // transfer back failed payment tokens to the buyer
     if (successCount == 0) revert AllReverted();
-    uint256 feeAmount = LibSweep._calculateFee(totalSpentAmount);
+    uint256 refundAmount = _maxSpendIncFees -
+      (totalSpentAmount + LibSweep._calculateFee(totalSpentAmount));
     if (_usingETH) {
-      payable(msg.sender).transfer(
-        _maxSpendIncFees - (totalSpentAmount + feeAmount)
-      );
+      payable(msg.sender).transfer(refundAmount);
+      emit LibSweep.RefundedToken(address(0), refundAmount);
       // emit refunded event
     } else {
-      IERC20(_paymentToken).safeTransfer(
-        msg.sender,
-        _maxSpendIncFees - (totalSpentAmount + feeAmount)
-      );
+      IERC20(_paymentToken).safeTransfer(msg.sender, refundAmount);
+      emit LibSweep.RefundedToken(address(_paymentToken), refundAmount);
     }
   }
 
@@ -76,69 +79,156 @@ contract SweepFacet is OwnershipModifers, ISmolSweeper, ABaseSweeperFacet {
     address _paymentToken,
     bool _usingETH,
     uint16 _inputSettingsBitFlag,
-    uint256 _maxSpendIncFees
+    uint256 _maxSpend
   ) internal returns (uint256 totalSpentAmount, uint256 successCount) {
     // buy all assets
-    uint256 _maxSpendIncFees = LibSweep._calculateAmountWithoutFees(
-      _maxSpendIncFees
-    );
-
-    // uint256 i = 0;
-    // uint256 length = _buyOrders.length;
     for (uint256 i = 0; i < _buyOrders.length; ) {
+      bool spentSuccess;
+      bytes memory data;
+
       if (_buyOrders[i].marketplaceId == LibSweep.TROVE_ID) {
-        (uint256 spentAmount, bool spentSuccess, BuyError buyError) = LibSweep
-          .tryBuyItemTrove(
-            BuyItemParams(
-              _buyOrders[i].assetAddress,
-              _buyOrders[i].tokenId,
-              _buyOrders[i].seller,
-              uint64(_buyOrders[i].quantity),
-              uint128(_buyOrders[i].price),
-              _paymentToken,
-              _usingETH
-            ),
-            _inputSettingsBitFlag,
-            _maxSpendIncFees - totalSpentAmount
+        // check if the listing exists
+        ITroveMarketplace.ListingOrBid memory listing = LibSweep
+          .diamondStorage()
+          .troveMarketplace
+          .listings(
+            _buyOrders[i].assetAddress,
+            _buyOrders[i].tokenId,
+            _buyOrders[i].seller
           );
 
+        // check if total price is less than max spend allowance left
+        if (
+          (listing.pricePerItem * _buyOrders[i].quantity) >
+          (_maxSpend - totalSpentAmount) &&
+          SettingsBitFlag.checkSetting(
+            _inputSettingsBitFlag,
+            SettingsBitFlag.EXCEEDING_MAX_SPEND
+          )
+        ) break;
+
+        // not enough listed items
+        if (
+          listing.quantity < _buyOrders[i].quantity &&
+          !SettingsBitFlag.checkSetting(
+            _inputSettingsBitFlag,
+            SettingsBitFlag.INSUFFICIENT_QUANTITY_ERC1155
+          )
+        ) {
+          continue; // skip item
+        }
+        BuyItemParams[] memory buyItemParams = new BuyItemParams[](1);
+        buyItemParams[0] = BuyItemParams(
+          _buyOrders[i].assetAddress,
+          _buyOrders[i].tokenId,
+          _buyOrders[i].seller,
+          uint64(listing.quantity),
+          uint128(_buyOrders[i].price),
+          _paymentToken,
+          _usingETH
+        );
+
+        (spentSuccess, data) = LibSweep.tryBuyItemTrove(buyItemParams);
+
         if (spentSuccess) {
-          totalSpentAmount += spentAmount;
+          if (
+            SettingsBitFlag.checkSetting(
+              _inputSettingsBitFlag,
+              SettingsBitFlag.EMIT_SUCCESS_EVENT_LOGS
+            )
+          ) {
+            emit LibSweep.SuccessBuyItem(
+              _buyOrders[0].assetAddress,
+              _buyOrders[0].tokenId,
+              payable(msg.sender),
+              listing.quantity,
+              listing.pricePerItem
+            );
+          }
+          totalSpentAmount += _buyOrders[i].price * _buyOrders[i].quantity;
           successCount++;
         } else {
           if (
-            buyError == BuyError.EXCEEDING_MAX_SPEND &&
             SettingsBitFlag.checkSetting(
               _inputSettingsBitFlag,
-              SettingsBitFlag.EXCEEDING_MAX_SPEND
+              SettingsBitFlag.EMIT_FAILURE_EVENT_LOGS
             )
-          ) break;
+          ) {
+            emit LibSweep.CaughtFailureBuyItem(
+              _buyOrders[0].assetAddress,
+              _buyOrders[0].tokenId,
+              payable(msg.sender),
+              listing.quantity,
+              listing.pricePerItem,
+              data
+            );
+          }
+          if (
+            SettingsBitFlag.checkSetting(
+              _inputSettingsBitFlag,
+              SettingsBitFlag.MARKETPLACE_BUY_ITEM_REVERTED
+            )
+          ) revert FirstBuyReverted(data);
         }
       } else if (_buyOrders[i].marketplaceId == LibSweep.STRATOS_ID) {
-        (uint256 spentAmount, bool spentSuccess, BuyError buyError) = LibSweep
-          .tryBuyItemStratos(
-            _buyOrders[i],
-            _paymentToken,
-            _signatures[i],
-            payable(msg.sender),
+        // check if total price is less than max spend allowance left
+        if (
+          (_buyOrders[i].price * _buyOrders[i].quantity) >
+          _maxSpend - totalSpentAmount &&
+          SettingsBitFlag.checkSetting(
             _inputSettingsBitFlag,
-            _maxSpendIncFees - totalSpentAmount
-          );
+            SettingsBitFlag.EXCEEDING_MAX_SPEND
+          )
+        ) break;
+
+        (spentSuccess, data) = LibSweep.tryBuyItemStratos(
+          _buyOrders[i],
+          _paymentToken,
+          _signatures[i],
+          payable(msg.sender)
+        );
+
         if (spentSuccess) {
-          totalSpentAmount += spentAmount;
+          if (
+            SettingsBitFlag.checkSetting(
+              _inputSettingsBitFlag,
+              SettingsBitFlag.EMIT_SUCCESS_EVENT_LOGS
+            )
+          ) {
+            emit LibSweep.SuccessBuyItem(
+              _buyOrders[0].assetAddress,
+              _buyOrders[0].tokenId,
+              payable(msg.sender),
+              _buyOrders[0].quantity,
+              _buyOrders[i].price
+            );
+          }
+          totalSpentAmount += _buyOrders[i].price * _buyOrders[i].quantity;
           successCount++;
         } else {
           if (
-            buyError == BuyError.EXCEEDING_MAX_SPEND &&
             SettingsBitFlag.checkSetting(
               _inputSettingsBitFlag,
-              SettingsBitFlag.EXCEEDING_MAX_SPEND
+              SettingsBitFlag.EMIT_FAILURE_EVENT_LOGS
             )
-          ) break;
+          ) {
+            emit LibSweep.CaughtFailureBuyItem(
+              _buyOrders[0].assetAddress,
+              _buyOrders[0].tokenId,
+              payable(msg.sender),
+              _buyOrders[0].quantity,
+              _buyOrders[i].price,
+              data
+            );
+          }
+          if (
+            SettingsBitFlag.checkSetting(
+              _inputSettingsBitFlag,
+              SettingsBitFlag.MARKETPLACE_BUY_ITEM_REVERTED
+            )
+          ) revert FirstBuyReverted(data);
         }
-      } else {
-        revert InvalidMarketplaceId();
-      }
+      } else revert InvalidMarketplaceId();
 
       unchecked {
         ++i;
@@ -147,20 +237,18 @@ contract SweepFacet is OwnershipModifers, ISmolSweeper, ABaseSweeperFacet {
   }
 
   function buyItemsMultiTokens(
-    BuyItemParams[] calldata _buyOrders,
+    MultiTokenBuyOrder[] calldata _buyOrders,
+    bytes[] calldata _signatures,
     uint16 _inputSettingsBitFlag,
     address[] calldata _paymentTokens,
     uint256[] calldata _maxSpendIncFees
   ) external payable {
     // transfer payment tokens to this contract
-    uint256 i = 0;
+    // uint256 i = 0;
     uint256 length = _paymentTokens.length;
 
-    for (; i < length; ) {
-      if (
-        _paymentTokens[i] == address(LibSweep.diamondStorage().weth) &&
-        msg.value > 0
-      ) {
+    for (uint256 i = 0; i < length; ) {
+      if (_buyOrders[i].usingETH) {
         if (_maxSpendIncFees[i] != msg.value) revert InvalidMsgValue();
       } else {
         // if (msg.value != 0) revert MsgValueShouldBeZero();
@@ -170,10 +258,10 @@ contract SweepFacet is OwnershipModifers, ISmolSweeper, ABaseSweeperFacet {
           address(this),
           _maxSpendIncFees[i]
         );
-        IERC20(_paymentTokens[i]).approve(
-          address(LibSweep.diamondStorage().troveMarketplace),
-          _maxSpendIncFees[i]
-        );
+        // IERC20(_paymentTokens[i]).approve(
+        //   address(LibSweep.diamondStorage().troveMarketplace),
+        //   _maxSpendIncFees[i]
+        // );
       }
 
       unchecked {
@@ -181,36 +269,30 @@ contract SweepFacet is OwnershipModifers, ISmolSweeper, ABaseSweeperFacet {
       }
     }
 
-    uint256[] memory maxSpends = _maxSpendWithoutFees(_maxSpendIncFees);
     (
       uint256[] memory totalSpentAmount,
       uint256 successCount
     ) = _buyItemsMultiTokens(
         _buyOrders,
+        _signatures,
         _inputSettingsBitFlag,
         _paymentTokens,
-        maxSpends
+        _maxSpendWithoutFees(_maxSpendIncFees)
       );
 
     // transfer back failed payment tokens to the buyer
     if (successCount == 0) revert AllReverted();
 
-    i = 0;
-    for (; i < length; ) {
-      uint256 feeAmount = LibSweep._calculateFee(totalSpentAmount[i]);
+    for (uint256 i = 0; i < length; ) {
+      uint256 refundAmount = _maxSpendIncFees[i] -
+        (totalSpentAmount[i] + LibSweep._calculateFee(totalSpentAmount[i]));
 
-      if (
-        _paymentTokens[i] == address(LibSweep.diamondStorage().weth) &&
-        _buyOrders[0].usingEth
-      ) {
-        payable(msg.sender).transfer(
-          _maxSpendIncFees[i] - (totalSpentAmount[i] + feeAmount)
-        );
+      if (_buyOrders[i].usingETH) {
+        payable(msg.sender).transfer(refundAmount);
+        emit LibSweep.RefundedToken(address(0), refundAmount);
       } else {
-        IERC20(_paymentTokens[i]).safeTransfer(
-          msg.sender,
-          _maxSpendIncFees[i] - (totalSpentAmount[i] + feeAmount)
-        );
+        IERC20(_paymentTokens[i]).safeTransfer(msg.sender, refundAmount);
+        emit LibSweep.RefundedToken(_paymentTokens[i], refundAmount);
       }
 
       unchecked {
@@ -220,267 +302,653 @@ contract SweepFacet is OwnershipModifers, ISmolSweeper, ABaseSweeperFacet {
   }
 
   function _buyItemsMultiTokens(
-    BuyItemParams[] memory _buyOrders,
+    MultiTokenBuyOrder[] memory _buyOrders,
+    bytes[] memory _signatures,
     uint16 _inputSettingsBitFlag,
-    address[] memory _inputTokenAddresses,
+    address[] memory _paymentTokens,
     uint256[] memory _maxSpends
   )
     internal
     returns (uint256[] memory totalSpentAmounts, uint256 successCount)
   {
-    // totalSpentAmounts = new uint256[](_inputTokenAddresses.length);
+    totalSpentAmounts = new uint256[](_paymentTokens.length);
     // // buy all assets
-    // for (uint256 i = 0; i < _buyOrders.length; ) {
-    //   uint256 j = _getTokenIndex(
-    //     _inputTokenAddresses,
-    //     _buyOrders[i].paymentToken
-    //   );
-    //   (uint256 spentAmount, bool spentSuccess, BuyError buyError) = tryBuyItem(
-    //     _buyOrders[i],
-    //     _inputSettingsBitFlag,
-    //     _maxSpends[j] - totalSpentAmounts[j]
-    //   );
-    //   if (spentSuccess) {
-    //     totalSpentAmounts[j] += spentAmount;
-    //     successCount++;
-    //   } else {
-    //     if (
-    //       buyError == BuyError.EXCEEDING_MAX_SPEND &&
-    //       SettingsBitFlag.checkSetting(
-    //         _inputSettingsBitFlag,
-    //         SettingsBitFlag.EXCEEDING_MAX_SPEND
-    //       )
-    //     ) break;
-    //   }
-    //   unchecked {
-    //     ++i;
-    //   }
-    // }
+    for (uint256 i = 0; i < _buyOrders.length; ) {
+      uint256 j = _getTokenIndex(_paymentTokens, _buyOrders[i].paymentToken);
+
+      bool spentSuccess;
+      bytes memory data;
+
+      if (_buyOrders[i].marketplaceId == LibSweep.TROVE_ID) {
+        // check if the listing exists
+        ITroveMarketplace.ListingOrBid memory listing = LibSweep
+          .diamondStorage()
+          .troveMarketplace
+          .listings(
+            _buyOrders[i].assetAddress,
+            _buyOrders[i].tokenId,
+            _buyOrders[i].seller
+          );
+
+        // check if total price is less than max spend allowance left
+        if (
+          (listing.pricePerItem * _buyOrders[i].quantity) >
+          (_maxSpends[j] - totalSpentAmounts[j]) &&
+          SettingsBitFlag.checkSetting(
+            _inputSettingsBitFlag,
+            SettingsBitFlag.EXCEEDING_MAX_SPEND
+          )
+        ) break;
+
+        // not enough listed items
+        if (
+          listing.quantity < _buyOrders[i].quantity &&
+          !SettingsBitFlag.checkSetting(
+            _inputSettingsBitFlag,
+            SettingsBitFlag.INSUFFICIENT_QUANTITY_ERC1155
+          )
+        ) {
+          continue; // skip item
+        }
+        BuyItemParams[] memory buyItemParams = new BuyItemParams[](1);
+        buyItemParams[0] = BuyItemParams(
+          _buyOrders[i].assetAddress,
+          _buyOrders[i].tokenId,
+          _buyOrders[i].seller,
+          uint64(listing.quantity),
+          uint128(_buyOrders[i].price),
+          _paymentTokens[j],
+          _buyOrders[i].usingETH
+        );
+
+        (spentSuccess, data) = LibSweep.tryBuyItemTrove(buyItemParams);
+
+        if (spentSuccess) {
+          if (
+            SettingsBitFlag.checkSetting(
+              _inputSettingsBitFlag,
+              SettingsBitFlag.EMIT_SUCCESS_EVENT_LOGS
+            )
+          ) {
+            emit LibSweep.SuccessBuyItem(
+              _buyOrders[0].assetAddress,
+              _buyOrders[0].tokenId,
+              payable(msg.sender),
+              listing.quantity,
+              listing.pricePerItem
+            );
+          }
+          totalSpentAmounts[j] += _buyOrders[i].price * _buyOrders[i].quantity;
+          successCount++;
+        } else {
+          if (
+            SettingsBitFlag.checkSetting(
+              _inputSettingsBitFlag,
+              SettingsBitFlag.EMIT_FAILURE_EVENT_LOGS
+            )
+          ) {
+            emit LibSweep.CaughtFailureBuyItem(
+              _buyOrders[0].assetAddress,
+              _buyOrders[0].tokenId,
+              payable(msg.sender),
+              listing.quantity,
+              listing.pricePerItem,
+              data
+            );
+          }
+          if (
+            SettingsBitFlag.checkSetting(
+              _inputSettingsBitFlag,
+              SettingsBitFlag.MARKETPLACE_BUY_ITEM_REVERTED
+            )
+          ) revert FirstBuyReverted(data);
+        }
+      } else if (_buyOrders[i].marketplaceId == LibSweep.STRATOS_ID) {
+        // check if total price is less than max spend allowance left
+        if (
+          (_buyOrders[i].price * _buyOrders[i].quantity) >
+          _maxSpends[j] - totalSpentAmounts[j] &&
+          SettingsBitFlag.checkSetting(
+            _inputSettingsBitFlag,
+            SettingsBitFlag.EXCEEDING_MAX_SPEND
+          )
+        ) break;
+
+        (spentSuccess, data) = LibSweep.tryBuyItemStratosMulti(
+          _buyOrders[i],
+          _signatures[i],
+          payable(msg.sender)
+        );
+
+        if (spentSuccess) {
+          if (
+            SettingsBitFlag.checkSetting(
+              _inputSettingsBitFlag,
+              SettingsBitFlag.EMIT_SUCCESS_EVENT_LOGS
+            )
+          ) {
+            emit LibSweep.SuccessBuyItem(
+              _buyOrders[0].assetAddress,
+              _buyOrders[0].tokenId,
+              payable(msg.sender),
+              _buyOrders[0].quantity,
+              _buyOrders[i].price
+            );
+          }
+          totalSpentAmounts[j] += _buyOrders[i].price * _buyOrders[i].quantity;
+          successCount++;
+        } else {
+          if (
+            SettingsBitFlag.checkSetting(
+              _inputSettingsBitFlag,
+              SettingsBitFlag.EMIT_FAILURE_EVENT_LOGS
+            )
+          ) {
+            emit LibSweep.CaughtFailureBuyItem(
+              _buyOrders[0].assetAddress,
+              _buyOrders[0].tokenId,
+              payable(msg.sender),
+              _buyOrders[0].quantity,
+              _buyOrders[i].price,
+              data
+            );
+          }
+          if (
+            SettingsBitFlag.checkSetting(
+              _inputSettingsBitFlag,
+              SettingsBitFlag.MARKETPLACE_BUY_ITEM_REVERTED
+            )
+          ) revert FirstBuyReverted(data);
+        }
+      } else revert InvalidMarketplaceId();
+
+      unchecked {
+        ++i;
+      }
+    }
   }
 
-  // function sweepItemsSingleToken(
-  //   BuyOrder[] calldata _buyOrders,
-  //   bytes[] memory _signatures,
-  //   uint16 _inputSettingsBitFlag,
-  //   address _inputTokenAddress,
-  //   uint256 _maxSpendIncFees,
-  //   uint256 _minSpend,
-  //   uint32 _maxSuccesses,
-  //   uint32 _maxFailures
-  // ) external payable {
-  //   // if (
-  //   //   _inputTokenAddress == address(LibSweep.diamondStorage().weth) &&
-  //   //   msg.value > 0
-  //   // ) {
-  //   //   if (_maxSpendIncFees != msg.value) revert InvalidMsgValue();
-  //   // } else {
-  //   //   if (msg.value != 0) revert MsgValueShouldBeZero();
-  //   //   // transfer payment tokens to this contract
-  //   //   IERC20(_inputTokenAddress).safeTransferFrom(
-  //   //     msg.sender,
-  //   //     address(this),
-  //   //     _maxSpendIncFees
-  //   //   );
-  //   //   IERC20(_inputTokenAddress).approve(
-  //   //     address(LibSweep.diamondStorage().troveMarketplace),
-  //   //     _maxSpendIncFees
-  //   //   );
-  //   // }
-  //   // (uint256 totalSpentAmount, uint256 successCount, ) = _sweepItemsSingleToken(
-  //   //   _buyOrders,
-  //   //   _inputSettingsBitFlag,
-  //   //   _maxSpendIncFees,
-  //   //   _minSpend,
-  //   //   _maxSuccesses,
-  //   //   _maxFailures
-  //   // );
-  //   // // transfer back failed payment tokens to the buyer
-  //   // if (successCount == 0) revert AllReverted();
-  //   // uint256 feeAmount = LibSweep._calculateFee(totalSpentAmount);
-  //   // if (
-  //   //   _inputTokenAddress == address(LibSweep.diamondStorage().weth) &&
-  //   //   _buyOrders[0].usingEth
-  //   // ) {
-  //   //   payable(msg.sender).transfer(
-  //   //     _maxSpendIncFees - (totalSpentAmount + feeAmount)
-  //   //   );
-  //   // } else {
-  //   //   IERC20(_inputTokenAddress).safeTransfer(
-  //   //     msg.sender,
-  //   //     _maxSpendIncFees - (totalSpentAmount + feeAmount)
-  //   //   );
-  //   // }
-  // }
+  struct SweepParams {
+    uint256 minSpend;
+    address paymentToken;
+    uint32 maxSuccesses;
+    uint32 maxFailures;
+    uint16 inputSettingsBitFlag;
+    bool usingETH;
+  }
 
-  // function _sweepItemsSingleToken(
-  //   BuyItemParams[] memory _buyOrders,
-  //   uint16 _inputSettingsBitFlag,
-  //   uint256 _maxSpendIncFees,
-  //   uint256 _minSpend,
-  //   uint32 _maxSuccesses,
-  //   uint32 _maxFailures
-  // )
-  //   internal
-  //   returns (
-  //     uint256 totalSpentAmount,
-  //     uint256 successCount,
-  //     uint256 failCount
-  //   )
-  // {
-  //   // buy all assets
-  //   for (uint256 i = 0; i < _buyOrders.length; ) {
-  //     if (successCount >= _maxSuccesses || failCount >= _maxFailures) break;
+  function sweepItemsSingleToken(
+    BuyOrder[] calldata _buyOrders,
+    bytes[] calldata _signatures,
+    SweepParams memory _sweepParams,
+    uint256 _maxSpendIncFees
+  ) external payable {
+    if (_sweepParams.usingETH) {
+      if (_maxSpendIncFees != msg.value) revert InvalidMsgValue();
+    } else {
+      if (msg.value != 0) revert MsgValueShouldBeZero();
+      // transfer payment tokens to this contract
+      IERC20(_sweepParams.paymentToken).safeTransferFrom(
+        msg.sender,
+        address(this),
+        _maxSpendIncFees
+      );
+      // IERC20(_inputTokenAddress).approve(
+      //   address(LibSweep.diamondStorage().troveMarketplace),
+      //   _maxSpendIncFees
+      // );
+    }
+    (uint256 totalSpentAmount, uint32 successCount, ) = _sweepItemsSingleToken(
+      _buyOrders,
+      _signatures,
+      _sweepParams,
+      LibSweep._calculateAmountWithoutFees(_maxSpendIncFees)
 
-  //     if (totalSpentAmount >= _minSpend) break;
+      // SweepParams(
+      //   LibSweep._calculateAmountWithoutFees(_sweepParams.maxSpendIncFees),
+      //   _sweepParams.minSpend,
+      //   _sweepParams.paymentToken,
+      //   _sweepParams.maxSuccesses,
+      //   _sweepParams.maxFailures,
+      //   _sweepParams.inputSettingsBitFlag,
+      //   _sweepParams.usingETH
+      // )
+    );
+    // transfer back failed payment tokens to the buyer
+    if (successCount == 0) revert AllReverted();
+    uint256 refundAmount = _maxSpendIncFees -
+      (totalSpentAmount + LibSweep._calculateFee(totalSpentAmount));
+    if (_sweepParams.usingETH) {
+      payable(msg.sender).transfer(refundAmount);
+      emit LibSweep.RefundedToken(address(0), refundAmount);
+    } else {
+      IERC20(_sweepParams.paymentToken).safeTransfer(msg.sender, refundAmount);
+      emit LibSweep.RefundedToken(
+        address(_sweepParams.paymentToken),
+        refundAmount
+      );
+    }
+  }
 
-  //     (uint256 spentAmount, bool spentSuccess, BuyError buyError) = tryBuyItem(
-  //       _buyOrders[i],
-  //       _inputSettingsBitFlag,
-  //       _maxSpendIncFees - totalSpentAmount
-  //     );
+  function _sweepItemsSingleToken(
+    BuyOrder[] memory _buyOrders,
+    bytes[] memory _signatures,
+    SweepParams memory _sweepParams,
+    uint256 _maxSpend
+  )
+    internal
+    returns (
+      uint256 totalSpentAmount,
+      uint32 successCount,
+      uint32 failCount
+    )
+  {
+    // buy all assets
+    for (uint256 i = 0; i < _buyOrders.length; ) {
+      if (_buyOrders[i].marketplaceId == LibSweep.TROVE_ID) {
+        // check if the listing exists
+        ITroveMarketplace.ListingOrBid memory listing;
+        {
+          listing = LibSweep.diamondStorage().troveMarketplace.listings(
+            _buyOrders[i].assetAddress,
+            _buyOrders[i].tokenId,
+            _buyOrders[i].seller
+          );
+        }
 
-  //     if (spentSuccess) {
-  //       totalSpentAmount += spentAmount;
-  //       successCount++;
-  //     } else {
-  //       if (
-  //         buyError == BuyError.EXCEEDING_MAX_SPEND &&
-  //         SettingsBitFlag.checkSetting(
-  //           _inputSettingsBitFlag,
-  //           SettingsBitFlag.EXCEEDING_MAX_SPEND
-  //         )
-  //       ) break;
-  //       failCount++;
-  //     }
+        // check if total price is less than max spend allowance left
+        if (
+          (listing.pricePerItem * _buyOrders[i].quantity) >
+          (_maxSpend - totalSpentAmount) &&
+          SettingsBitFlag.checkSetting(
+            _sweepParams.inputSettingsBitFlag,
+            SettingsBitFlag.EXCEEDING_MAX_SPEND
+          )
+        ) break;
 
-  //     unchecked {
-  //       ++i;
-  //     }
-  //   }
-  // }
+        // not enough listed items
+        if (
+          listing.quantity < _buyOrders[i].quantity &&
+          !SettingsBitFlag.checkSetting(
+            _sweepParams.inputSettingsBitFlag,
+            SettingsBitFlag.INSUFFICIENT_QUANTITY_ERC1155
+          )
+        ) continue; // skip item
 
-  // function sweepItemsMultiTokens(
-  //   BuyOrder[] calldata _buyOrders,
-  //   bytes[] memory _signatures,
-  //   uint16 _inputSettingsBitFlag,
-  //   address[] calldata _inputTokenAddresses,
-  //   uint256[] calldata _maxSpendIncFees,
-  //   uint256[] calldata _minSpends,
-  //   uint32 _maxSuccesses,
-  //   uint32 _maxFailures
-  // ) external payable {
-  //   // // transfer payment tokens to this contract
-  //   // for (uint256 i = 0; i < _maxSpendIncFees.length; ) {
-  //   //   if (
-  //   //     _inputTokenAddresses[i] == address(LibSweep.diamondStorage().weth) &&
-  //   //     msg.value > 0
-  //   //   ) {
-  //   //     if (_maxSpendIncFees[i] != msg.value) revert InvalidMsgValue();
-  //   //   } else {
-  //   //     // if (msg.value != 0) revert MsgValueShouldBeZero();
-  //   //     // transfer payment tokens to this contract
-  //   //     IERC20(_inputTokenAddresses[i]).safeTransferFrom(
-  //   //       msg.sender,
-  //   //       address(this),
-  //   //       _maxSpendIncFees[i]
-  //   //     );
-  //   //     IERC20(_inputTokenAddresses[i]).approve(
-  //   //       address(LibSweep.diamondStorage().troveMarketplace),
-  //   //       _maxSpendIncFees[i]
-  //   //     );
-  //   //   }
-  //   //   unchecked {
-  //   //     ++i;
-  //   //   }
-  //   // }
-  //   // uint256[] memory _maxSpendIncFeesAmount = _maxSpendWithoutFees(
-  //   //   _maxSpendIncFees
-  //   // );
-  //   // (
-  //   //   uint256[] memory totalSpentAmount,
-  //   //   uint256 successCount,
-  //   // ) = _sweepItemsMultiTokens(
-  //   //     _buyOrders,
-  //   //     _inputSettingsBitFlag,
-  //   //     _inputTokenAddresses,
-  //   //     _maxSpendIncFeesAmount,
-  //   //     _minSpends,
-  //   //     _maxSuccesses,
-  //   //     _maxFailures
-  //   //   );
-  //   // // transfer back failed payment tokens to the buyer
-  //   // if (successCount == 0) revert AllReverted();
-  //   // for (uint256 i = 0; i < _maxSpendIncFees.length; ) {
-  //   //   uint256 feeAmount = LibSweep._calculateFee(totalSpentAmount[i]);
-  //   //   if (
-  //   //     _inputTokenAddresses[i] == address(LibSweep.diamondStorage().weth) &&
-  //   //     _buyOrders[0].usingEth
-  //   //   ) {
-  //   //     payable(msg.sender).transfer(
-  //   //       _maxSpendIncFees[i] - (totalSpentAmount[i] + feeAmount)
-  //   //     );
-  //   //   } else {
-  //   //     IERC20(_inputTokenAddresses[i]).safeTransfer(
-  //   //       msg.sender,
-  //   //       _maxSpendIncFees[i] - (totalSpentAmount[i] + feeAmount)
-  //   //     );
-  //   //   }
-  //   //   unchecked {
-  //   //     ++i;
-  //   //   }
-  //   // }
-  // }
+        BuyItemParams[] memory buyItemParams = new BuyItemParams[](1);
+        buyItemParams[0] = BuyItemParams(
+          _buyOrders[i].assetAddress,
+          _buyOrders[i].tokenId,
+          _buyOrders[i].seller,
+          uint64(listing.quantity),
+          uint128(_buyOrders[i].price),
+          _sweepParams.paymentToken,
+          _sweepParams.usingETH
+        );
 
-  // function _sweepItemsMultiTokens(
-  //   BuyItemParams[] memory _buyOrders,
-  //   uint16 _inputSettingsBitFlag,
-  //   address[] memory _inputTokenAddresses,
-  //   uint256[] memory _maxSpendIncFeesAmount,
-  //   uint256[] memory _minSpends,
-  //   uint32 _maxSuccesses,
-  //   uint32 _maxFailures
-  // )
-  //   internal
-  //   returns (
-  //     uint256[] memory totalSpentAmounts,
-  //     uint256 successCount,
-  //     uint256 failCount
-  //   )
-  // {
-  //   totalSpentAmounts = new uint256[](_inputTokenAddresses.length);
+        (bool spentSuccess, bytes memory data) = LibSweep.tryBuyItemTrove(
+          buyItemParams
+        );
 
-  //   for (uint256 i = 0; i < _buyOrders.length; ) {
-  //     if (successCount >= _maxSuccesses || failCount >= _maxFailures) break;
+        if (spentSuccess) {
+          if (
+            SettingsBitFlag.checkSetting(
+              _sweepParams.inputSettingsBitFlag,
+              SettingsBitFlag.EMIT_SUCCESS_EVENT_LOGS
+            )
+          ) {
+            emit LibSweep.SuccessBuyItem(
+              _buyOrders[0].assetAddress,
+              _buyOrders[0].tokenId,
+              payable(msg.sender),
+              listing.quantity,
+              listing.pricePerItem
+            );
+          }
+          totalSpentAmount += _buyOrders[i].price * _buyOrders[i].quantity;
+          successCount++;
+        } else {
+          if (
+            SettingsBitFlag.checkSetting(
+              _sweepParams.inputSettingsBitFlag,
+              SettingsBitFlag.EMIT_FAILURE_EVENT_LOGS
+            )
+          ) {
+            emit LibSweep.CaughtFailureBuyItem(
+              _buyOrders[0].assetAddress,
+              _buyOrders[0].tokenId,
+              payable(msg.sender),
+              listing.quantity,
+              listing.pricePerItem,
+              data
+            );
+          }
+          if (
+            SettingsBitFlag.checkSetting(
+              _sweepParams.inputSettingsBitFlag,
+              SettingsBitFlag.MARKETPLACE_BUY_ITEM_REVERTED
+            )
+          ) revert FirstBuyReverted(data);
+        }
+      } else if (_buyOrders[i].marketplaceId == LibSweep.STRATOS_ID) {
+        // check if total price is less than max spend allowance left
+        if (
+          (_buyOrders[i].price * _buyOrders[i].quantity) >
+          _maxSpend - totalSpentAmount &&
+          SettingsBitFlag.checkSetting(
+            _sweepParams.inputSettingsBitFlag,
+            SettingsBitFlag.EXCEEDING_MAX_SPEND
+          )
+        ) break;
 
-  //     uint256 j = _getTokenIndex(
-  //       _inputTokenAddresses,
-  //       _buyOrders[i].paymentToken
-  //     );
+        (bool spentSuccess, bytes memory data) = LibSweep.tryBuyItemStratos(
+          _buyOrders[i],
+          _sweepParams.paymentToken,
+          _signatures[i],
+          payable(msg.sender)
+        );
 
-  //     if (totalSpentAmounts[j] >= _minSpends[j]) break;
+        if (spentSuccess) {
+          if (
+            SettingsBitFlag.checkSetting(
+              _sweepParams.inputSettingsBitFlag,
+              SettingsBitFlag.EMIT_SUCCESS_EVENT_LOGS
+            )
+          ) {
+            emit LibSweep.SuccessBuyItem(
+              _buyOrders[0].assetAddress,
+              _buyOrders[0].tokenId,
+              payable(msg.sender),
+              _buyOrders[0].quantity,
+              _buyOrders[i].price
+            );
+          }
+          totalSpentAmount += _buyOrders[i].price * _buyOrders[i].quantity;
+          successCount++;
+        } else {
+          if (
+            SettingsBitFlag.checkSetting(
+              _sweepParams.inputSettingsBitFlag,
+              SettingsBitFlag.EMIT_FAILURE_EVENT_LOGS
+            )
+          ) {
+            emit LibSweep.CaughtFailureBuyItem(
+              _buyOrders[0].assetAddress,
+              _buyOrders[0].tokenId,
+              payable(msg.sender),
+              _buyOrders[0].quantity,
+              _buyOrders[i].price,
+              data
+            );
+          }
+          if (
+            SettingsBitFlag.checkSetting(
+              _sweepParams.inputSettingsBitFlag,
+              SettingsBitFlag.MARKETPLACE_BUY_ITEM_REVERTED
+            )
+          ) revert FirstBuyReverted(data);
+          failCount++;
+        }
+      } else revert InvalidMarketplaceId();
 
-  //     (uint256 spentAmount, bool spentSuccess, BuyError buyError) = tryBuyItem(
-  //       _buyOrders[i],
-  //       _inputSettingsBitFlag,
-  //       _maxSpendIncFeesAmount[j] - totalSpentAmounts[j]
-  //     );
+      if (
+        successCount >= _sweepParams.maxSuccesses ||
+        failCount >= _sweepParams.maxFailures
+      ) break;
+      if (totalSpentAmount >= _sweepParams.minSpend) break;
 
-  //     if (spentSuccess) {
-  //       totalSpentAmounts[j] += spentAmount;
-  //       successCount++;
-  //     } else {
-  //       if (
-  //         buyError == BuyError.EXCEEDING_MAX_SPEND &&
-  //         SettingsBitFlag.checkSetting(
-  //           _inputSettingsBitFlag,
-  //           SettingsBitFlag.EXCEEDING_MAX_SPEND
-  //         )
-  //       ) break;
-  //       failCount++;
-  //     }
-  //     unchecked {
-  //       ++i;
-  //     }
-  //   }
-  // }
+      unchecked {
+        ++i;
+      }
+    }
+  }
+
+  struct SweepParamsMulti {
+    uint256[] minSpends;
+    address[] paymentTokens;
+    uint32 maxSuccesses;
+    uint32 maxFailures;
+    uint16 inputSettingsBitFlag;
+    bool[] usingETH;
+  }
+
+  function sweepItemsMultiTokens(
+    MultiTokenBuyOrder[] calldata _buyOrders,
+    bytes[] calldata _signatures,
+    uint256[] calldata _maxSpendIncFees,
+    SweepParamsMulti calldata _sweepParams
+  )
+    external
+    payable
+    returns (uint256[] memory totalSpentAmount, uint32 successCount)
+  {
+    // // transfer payment tokens to this contract
+    for (uint256 i = 0; i < _maxSpendIncFees.length; ) {
+      if (_buyOrders[i].usingETH) {
+        if (_maxSpendIncFees[i] != msg.value) revert InvalidMsgValue();
+      } else {
+        // if (msg.value != 0) revert MsgValueShouldBeZero();
+        // transfer payment tokens to this contract
+        IERC20(_sweepParams.paymentTokens[i]).safeTransferFrom(
+          msg.sender,
+          address(this),
+          _maxSpendIncFees[i]
+        );
+        // IERC20(_inputTokenAddresses[i]).approve(
+        //   address(LibSweep.diamondStorage().troveMarketplace),
+        //   _maxSpendIncFees[i]
+        // );
+      }
+      unchecked {
+        ++i;
+      }
+    }
+    (totalSpentAmount, successCount, ) = _sweepItemsMultiTokens(
+      _buyOrders,
+      _signatures,
+      _sweepParams,
+      _maxSpendWithoutFees(_maxSpendIncFees)
+    );
+    // transfer back failed payment tokens to the buyer
+    if (successCount == 0) revert AllReverted();
+    for (uint256 i = 0; i < _maxSpendIncFees.length; ) {
+      uint256 refundAmount = _maxSpendIncFees[i] -
+        (totalSpentAmount[i] + LibSweep._calculateFee(totalSpentAmount[i]));
+      if (_buyOrders[0].usingETH) {
+        payable(msg.sender).transfer(refundAmount);
+        emit LibSweep.RefundedToken(address(0), refundAmount);
+      } else {
+        IERC20(_sweepParams.paymentTokens[i]).safeTransfer(
+          msg.sender,
+          refundAmount
+        );
+        emit LibSweep.RefundedToken(
+          _sweepParams.paymentTokens[i],
+          refundAmount
+        );
+      }
+      unchecked {
+        ++i;
+      }
+    }
+  }
+
+  function _sweepItemsMultiTokens(
+    MultiTokenBuyOrder[] memory _buyOrders,
+    bytes[] memory _signatures,
+    SweepParamsMulti calldata _sweepParams,
+    uint256[] memory _maxSpends
+  )
+    internal
+    returns (
+      uint256[] memory totalSpentAmounts,
+      uint32 successCount,
+      uint32 failCount
+    )
+  {
+    totalSpentAmounts = new uint256[](_sweepParams.paymentTokens.length);
+    for (uint256 i = 0; i < _buyOrders.length; ) {
+      uint256 j = _getTokenIndex(
+        _sweepParams.paymentTokens,
+        _buyOrders[i].paymentToken
+      );
+
+      bool spentSuccess;
+      bytes memory data;
+
+      if (_buyOrders[i].marketplaceId == LibSweep.TROVE_ID) {
+        // check if the listing exists
+        ITroveMarketplace.ListingOrBid memory listing = LibSweep
+          .diamondStorage()
+          .troveMarketplace
+          .listings(
+            _buyOrders[i].assetAddress,
+            _buyOrders[i].tokenId,
+            _buyOrders[i].seller
+          );
+
+        // check if total price is less than max spend allowance left
+        if (
+          (listing.pricePerItem * _buyOrders[i].quantity) >
+          (_maxSpends[j] - totalSpentAmounts[j]) &&
+          SettingsBitFlag.checkSetting(
+            _sweepParams.inputSettingsBitFlag,
+            SettingsBitFlag.EXCEEDING_MAX_SPEND
+          )
+        ) break;
+
+        // not enough listed items
+        if (
+          listing.quantity < _buyOrders[i].quantity &&
+          !SettingsBitFlag.checkSetting(
+            _sweepParams.inputSettingsBitFlag,
+            SettingsBitFlag.INSUFFICIENT_QUANTITY_ERC1155
+          )
+        ) {
+          continue; // skip item
+        }
+        BuyItemParams[] memory buyItemParams = new BuyItemParams[](1);
+        buyItemParams[0] = BuyItemParams(
+          _buyOrders[i].assetAddress,
+          _buyOrders[i].tokenId,
+          _buyOrders[i].seller,
+          uint64(listing.quantity),
+          uint128(_buyOrders[i].price),
+          _sweepParams.paymentTokens[j],
+          _buyOrders[i].usingETH
+        );
+
+        (spentSuccess, data) = LibSweep.tryBuyItemTrove(buyItemParams);
+
+        if (spentSuccess) {
+          if (
+            SettingsBitFlag.checkSetting(
+              _sweepParams.inputSettingsBitFlag,
+              SettingsBitFlag.EMIT_SUCCESS_EVENT_LOGS
+            )
+          ) {
+            emit LibSweep.SuccessBuyItem(
+              _buyOrders[0].assetAddress,
+              _buyOrders[0].tokenId,
+              payable(msg.sender),
+              listing.quantity,
+              listing.pricePerItem
+            );
+          }
+          totalSpentAmounts[j] += _buyOrders[i].price * _buyOrders[i].quantity;
+          successCount++;
+        } else {
+          if (
+            SettingsBitFlag.checkSetting(
+              _sweepParams.inputSettingsBitFlag,
+              SettingsBitFlag.EMIT_FAILURE_EVENT_LOGS
+            )
+          ) {
+            emit LibSweep.CaughtFailureBuyItem(
+              _buyOrders[0].assetAddress,
+              _buyOrders[0].tokenId,
+              payable(msg.sender),
+              listing.quantity,
+              listing.pricePerItem,
+              data
+            );
+          }
+          if (
+            SettingsBitFlag.checkSetting(
+              _sweepParams.inputSettingsBitFlag,
+              SettingsBitFlag.MARKETPLACE_BUY_ITEM_REVERTED
+            )
+          ) revert FirstBuyReverted(data);
+        }
+      } else if (_buyOrders[i].marketplaceId == LibSweep.STRATOS_ID) {
+        // check if total price is less than max spend allowance left
+        if (
+          (_buyOrders[i].price * _buyOrders[i].quantity) >
+          _maxSpends[j] - totalSpentAmounts[j] &&
+          SettingsBitFlag.checkSetting(
+            _sweepParams.inputSettingsBitFlag,
+            SettingsBitFlag.EXCEEDING_MAX_SPEND
+          )
+        ) break;
+
+        (spentSuccess, data) = LibSweep.tryBuyItemStratosMulti(
+          _buyOrders[i],
+          _signatures[i],
+          payable(msg.sender)
+        );
+
+        if (spentSuccess) {
+          if (
+            SettingsBitFlag.checkSetting(
+              _sweepParams.inputSettingsBitFlag,
+              SettingsBitFlag.EMIT_SUCCESS_EVENT_LOGS
+            )
+          ) {
+            emit LibSweep.SuccessBuyItem(
+              _buyOrders[0].assetAddress,
+              _buyOrders[0].tokenId,
+              payable(msg.sender),
+              _buyOrders[0].quantity,
+              _buyOrders[i].price
+            );
+          }
+          totalSpentAmounts[j] += _buyOrders[i].price * _buyOrders[i].quantity;
+          successCount++;
+        } else {
+          if (
+            SettingsBitFlag.checkSetting(
+              _sweepParams.inputSettingsBitFlag,
+              SettingsBitFlag.EMIT_FAILURE_EVENT_LOGS
+            )
+          ) {
+            emit LibSweep.CaughtFailureBuyItem(
+              _buyOrders[0].assetAddress,
+              _buyOrders[0].tokenId,
+              payable(msg.sender),
+              _buyOrders[0].quantity,
+              _buyOrders[i].price,
+              data
+            );
+          }
+          if (
+            SettingsBitFlag.checkSetting(
+              _sweepParams.inputSettingsBitFlag,
+              SettingsBitFlag.MARKETPLACE_BUY_ITEM_REVERTED
+            )
+          ) revert FirstBuyReverted(data);
+          failCount++;
+        }
+      } else revert InvalidMarketplaceId();
+
+      if (
+        successCount >= _sweepParams.maxSuccesses ||
+        failCount >= _sweepParams.maxFailures
+      ) break;
+      if (totalSpentAmounts[j] >= _sweepParams.minSpends[j]) break;
+
+      unchecked {
+        ++i;
+      }
+    }
+  }
 }

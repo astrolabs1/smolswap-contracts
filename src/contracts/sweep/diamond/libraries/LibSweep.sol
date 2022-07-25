@@ -34,7 +34,7 @@ library LibSweep {
   event SuccessBuyItem(
     address indexed _nftAddress,
     uint256 _tokenId,
-    address indexed _seller,
+    // address indexed _seller,
     address indexed _buyer,
     uint256 _quantity,
     uint256 _price
@@ -43,13 +43,13 @@ library LibSweep {
   event CaughtFailureBuyItem(
     address indexed _nftAddress,
     uint256 _tokenId,
-    address indexed _seller,
+    // address indexed _seller,
     address indexed _buyer,
     uint256 _quantity,
     uint256 _price,
     bytes _errorReason
   );
-  event refundToken(address tokenAddress, uint256 amount);
+  event RefundedToken(address tokenAddress, uint256 amount);
 
   bytes32 constant DIAMOND_STORAGE_POSITION =
     keccak256("diamond.standard.sweep.storage");
@@ -93,295 +93,72 @@ library LibSweep {
       (FEE_BASIS_POINTS + ds.sweepFee));
   }
 
-  function tryBuyItemTrove(
-    BuyItemParams memory _buyOrder,
-    uint16 _inputSettingsBitFlag,
-    uint256 _maxSpendAllowanceLeft
-  )
+  function tryBuyItemTrove(BuyItemParams[] memory _buyOrders)
     internal
-    returns (
-      uint256 totalPrice,
-      bool success,
-      BuyError buyError
-    )
+    returns (bool success, bytes memory data)
   {
-    uint256 quantityToBuy = _buyOrder.quantity;
-    // ITroveMarketplace marketplace = LibSweep.diamondStorage().troveMarketplace;
-    // check if the listing exists
-    ITroveMarketplace.ListingOrBid memory listing = LibSweep
-      .diamondStorage()
-      .troveMarketplace
-      .listings(_buyOrder.nftAddress, _buyOrder.tokenId, _buyOrder.owner);
-
-    // // check if the price is correct
-    // if (listing.pricePerItem > _buyOrder.maxPricePerItem) {
-    //     // skip this item
-    //     return (0, false, SettingsBitFlag.MAX_PRICE_PER_ITEM_EXCEEDED);
-    // }
-
-    // not enough listed items
-    if (listing.quantity < quantityToBuy) {
-      if (
-        SettingsBitFlag.checkSetting(
-          _inputSettingsBitFlag,
-          SettingsBitFlag.INSUFFICIENT_QUANTITY_ERC1155
-        )
-      ) {
-        // else buy all listed items even if it's less than requested
-        quantityToBuy = listing.quantity;
-      } else {
-        // skip this item
-        return (0, false, BuyError.INSUFFICIENT_QUANTITY_ERC1155);
-      }
-    }
-
-    // check if total price is less than max spend allowance left
-    if ((listing.pricePerItem * quantityToBuy) > _maxSpendAllowanceLeft) {
-      return (0, false, BuyError.EXCEEDING_MAX_SPEND);
-    }
-
-    BuyItemParams[] memory buyItemParams = new BuyItemParams[](1);
-    buyItemParams[0] = _buyOrder;
-
-    uint256 totalSpent = 0;
-    uint256 value = (_buyOrder.paymentToken ==
-      address(LibSweep.diamondStorage().weth))
-      ? (_buyOrder.maxPricePerItem * quantityToBuy)
-      : 0;
-
-    try
-      LibSweep.diamondStorage().troveMarketplace.buyItems{value: value}(
-        buyItemParams
-      )
-    {
-      if (
-        SettingsBitFlag.checkSetting(
-          _inputSettingsBitFlag,
-          SettingsBitFlag.EMIT_SUCCESS_EVENT_LOGS
-        )
-      ) {
-        emit SuccessBuyItem(
-          _buyOrder.nftAddress,
-          _buyOrder.tokenId,
-          _buyOrder.owner,
-          msg.sender,
-          quantityToBuy,
-          listing.pricePerItem
-        );
-      }
-
-      if (
-        IERC165(_buyOrder.nftAddress).supportsInterface(
-          LibSweep.INTERFACE_ID_ERC721
-        )
-      ) {
-        IERC721(_buyOrder.nftAddress).safeTransferFrom(
-          address(this),
-          msg.sender,
-          _buyOrder.tokenId
-        );
-      } else if (
-        IERC165(_buyOrder.nftAddress).supportsInterface(
-          LibSweep.INTERFACE_ID_ERC1155
-        )
-      ) {
-        IERC1155(_buyOrder.nftAddress).safeTransferFrom(
-          address(this),
-          msg.sender,
-          _buyOrder.tokenId,
-          quantityToBuy,
-          ""
-        );
-      } else revert InvalidNFTAddress();
-
-      totalSpent = listing.pricePerItem * quantityToBuy;
-    } catch (bytes memory errorReason) {
-      if (
-        SettingsBitFlag.checkSetting(
-          _inputSettingsBitFlag,
-          SettingsBitFlag.EMIT_FAILURE_EVENT_LOGS
-        )
-      ) {
-        emit CaughtFailureBuyItem(
-          _buyOrder.nftAddress,
-          _buyOrder.tokenId,
-          _buyOrder.owner,
-          msg.sender,
-          quantityToBuy,
-          listing.pricePerItem,
-          errorReason
-        );
-      }
-
-      if (
-        SettingsBitFlag.checkSetting(
-          _inputSettingsBitFlag,
-          SettingsBitFlag.MARKETPLACE_BUY_ITEM_REVERTED
-        )
-      ) revert FirstBuyReverted(errorReason);
-      // skip this item
-      return (0, false, BuyError.BUY_ITEM_REVERTED);
-    }
-
-    return (totalSpent, true, BuyError.NONE);
-  }
-
-  function helper(
-    BuyOrder memory _buyOrder,
-    address paymentERC20,
-    bytes memory signature,
-    address payable buyer
-  ) internal returns (bool success, bytes memory data) {
-    return
-      address(LibSweep.diamondStorage().stratosMarketplace).call{
-        value: (paymentERC20 == address(0))
-          ? (_buyOrder.price * _buyOrder.quantity)
-          : 0,
-        gas: gasleft()
-      }(
-        abi.encodeWithSelector(
-          ExchangeV5.fillSellOrder.selector,
-          _buyOrder.seller,
-          _buyOrder.assetAddress,
-          _buyOrder.tokenId,
-          _buyOrder.startTime,
-          _buyOrder.expiration,
-          _buyOrder.price,
-          _buyOrder.quantity,
-          _buyOrder.createdAtBlockNumber,
-          paymentERC20,
-          signature,
-          buyer
-        )
-
-        // abi.encodeWithSignature(
-        //   "fillSellOrder(address payable seller,address contractAddress,uint256 tokenId,uint256 startTime,uint256 expiration,uint256 price,uint256 quantity,uint256 createdAtBlockNumber,address paymentERC20,bytes memory signature,address payable buyer)",
-        //   _buyOrder.seller,
-        //   _buyOrder.assetAddress,
-        //   _buyOrder.tokenId,
-        //   _buyOrder.startTime,
-        //   _buyOrder.expiration,
-        //   _buyOrder.price,
-        //   _buyOrder.quantity,
-        //   _buyOrder.createdAtBlockNumber,
-        //   paymentERC20,
-        //   signature,
-        //   buyer
-        // )
-      );
+    ITroveMarketplace marketplace = LibSweep.diamondStorage().troveMarketplace;
+    (success, data) = address(marketplace).call{
+      value: (_buyOrders[0].paymentToken == marketplace.weth())
+        ? (_buyOrders[0].maxPricePerItem * _buyOrders[0].quantity)
+        : 0
+    }(abi.encodeWithSelector(ITroveMarketplace.buyItems.selector, _buyOrders));
   }
 
   function tryBuyItemStratos(
     BuyOrder memory _buyOrder,
     address paymentERC20,
     bytes memory signature,
-    address payable buyer,
-    uint16 _inputSettingsBitFlag,
-    uint256 _maxSpendAllowanceLeft
-  )
-    internal
-    returns (
-      uint256 totalSpent,
-      bool success,
-      BuyError buyError
-    )
-  {
-    // check if total price is less than max spend allowance left
-    {
-      if ((_buyOrder.price * _buyOrder.quantity) > _maxSpendAllowanceLeft)
-        return (0, false, BuyError.EXCEEDING_MAX_SPEND);
-    }
+    address payable buyer
+  ) internal returns (bool success, bytes memory data) {
+    (success, data) = address(LibSweep.diamondStorage().stratosMarketplace)
+      .call{
+      value: (paymentERC20 == address(0))
+        ? (_buyOrder.price * _buyOrder.quantity)
+        : 0
+    }(
+      abi.encodeWithSelector(
+        ExchangeV5.fillSellOrder.selector,
+        _buyOrder.seller,
+        _buyOrder.assetAddress,
+        _buyOrder.tokenId,
+        _buyOrder.startTime,
+        _buyOrder.expiration,
+        _buyOrder.price,
+        _buyOrder.quantity,
+        _buyOrder.createdAtBlockNumber,
+        paymentERC20,
+        signature,
+        buyer
+      )
+    );
+  }
 
-    helper(_buyOrder, paymentERC20, signature, buyer);
-
-    // (bool success, bytes memory data) = address(
-    //   LibSweep.diamondStorage().stratosMarketplace
-    // ).call{
-    //   value: (paymentERC20 == address(0))
-    //     ? (_buyOrder.price * _buyOrder.quantity)
-    //     : 0,
-    //   gas: gasleft()
-    // }(
-    //   abi.encodeWithSignature(
-    //     "fillSellOrder(address payable seller,address contractAddress,uint256 tokenId,uint256 startTime,uint256 expiration,uint256 price,uint256 quantity,uint256 createdAtBlockNumber,address paymentERC20,bytes memory signature,address payable buyer)",
-    //     _buyOrder.seller,
-    //     _buyOrder.assetAddress,
-    //     _buyOrder.tokenId,
-    //     _buyOrder.startTime,
-    //     _buyOrder.expiration,
-    //     _buyOrder.price,
-    //     _buyOrder.quantity,
-    //     _buyOrder.createdAtBlockNumber,
-    //     paymentERC20,
-    //     signature,
-    //     buyer
-    //   )
-    // );
-
-    // try
-    //   LibSweep.diamondStorage().stratosMarketplace.fillSellOrder{
-    //     value: (paymentERC20 == address(0))
-    //       ? (_buyOrder.price * _buyOrder.quantity)
-    //       : 0
-    //   }(
-    //     _buyOrder.seller,
-    //     _buyOrder.assetAddress,
-    //     _buyOrder.tokenId,
-    //     _buyOrder.startTime,
-    //     _buyOrder.expiration,
-    //     _buyOrder.price,
-    //     _buyOrder.quantity,
-    //     _buyOrder.createdAtBlockNumber,
-    //     paymentERC20,
-    //     signature,
-    //     buyer
-    //   )
-    // {
-    //   if (
-    //     SettingsBitFlag.checkSetting(
-    //       _inputSettingsBitFlag,
-    //       SettingsBitFlag.EMIT_SUCCESS_EVENT_LOGS
-    //     )
-    //   ) {
-    //     emit SuccessBuyItem(
-    //       _buyOrder.assetAddress,
-    //       _buyOrder.tokenId,
-    //       _buyOrder.seller,
-    //       buyer,
-    //       _buyOrder.quantity,
-    //       _buyOrder.price
-    //     );
-    //   }
-
-    //   totalSpent = _buyOrder.price * _buyOrder.quantity;
-    // } catch (bytes memory errorReason) {
-    //   if (
-    //     SettingsBitFlag.checkSetting(
-    //       _inputSettingsBitFlag,
-    //       SettingsBitFlag.EMIT_FAILURE_EVENT_LOGS
-    //     )
-    //   ) {
-    //     emit CaughtFailureBuyItem(
-    //       _buyOrder.assetAddress,
-    //       _buyOrder.tokenId,
-    //       _buyOrder.seller,
-    //       buyer,
-    //       _buyOrder.quantity,
-    //       _buyOrder.price,
-    //       errorReason
-    //     );
-    //   }
-
-    //   if (
-    //     SettingsBitFlag.checkSetting(
-    //       _inputSettingsBitFlag,
-    //       SettingsBitFlag.MARKETPLACE_BUY_ITEM_REVERTED
-    //     )
-    //   ) revert FirstBuyReverted(errorReason);
-    //   // skip this item
-    //   return (0, false, BuyError.BUY_ITEM_REVERTED);
-    // }
-
-    return (totalSpent, true, BuyError.NONE);
+  function tryBuyItemStratosMulti(
+    MultiTokenBuyOrder memory _buyOrder,
+    bytes memory signature,
+    address payable buyer
+  ) internal returns (bool success, bytes memory data) {
+    (success, data) = address(LibSweep.diamondStorage().stratosMarketplace)
+      .call{
+      value: (_buyOrder.paymentToken == address(0))
+        ? (_buyOrder.price * _buyOrder.quantity)
+        : 0
+    }(
+      abi.encodeWithSelector(
+        ExchangeV5.fillSellOrder.selector,
+        _buyOrder.seller,
+        _buyOrder.assetAddress,
+        _buyOrder.tokenId,
+        _buyOrder.startTime,
+        _buyOrder.expiration,
+        _buyOrder.price,
+        _buyOrder.quantity,
+        _buyOrder.createdAtBlockNumber,
+        _buyOrder.paymentToken,
+        signature,
+        buyer
+      )
+    );
   }
 }

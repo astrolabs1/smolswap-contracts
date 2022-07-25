@@ -9,7 +9,6 @@ remappings = [
     '@openzeppelin-contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/',
     '@contracts/=src/contracts/',
     '@openzeppelin/=lib/openzeppelin-contracts/',
-    'ds-test/=lib/ds-test/src/',
     'openzeppelin-contracts/=lib/openzeppelin-contracts/',
     '@forge-std/=lib/forge-std'
 ]
@@ -32,7 +31,6 @@ remappings = [
     '@openzeppelin-contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/',
     '@contracts/=src/contracts/',
     '@openzeppelin/=lib/openzeppelin-contracts/',
-    'ds-test/=lib/ds-test/src/',
     'openzeppelin-contracts/=lib/openzeppelin-contracts/',
     '@forge-std/=lib/forge-std'
 ]
