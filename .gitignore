@@ -33,4 +33,6 @@ src/**/*.ts
 .env.testnet
 .env.rinkeby
 
+.env.*
+
 scripts/**/*

@@ -39,7 +39,9 @@ contract SmolSweeper is Diamond, ANFTReceiver2, OwnershipModifers {
 
   constructor(address _contractOwner, address _diamondCutFacet)
     Diamond(_contractOwner, _diamondCutFacet)
-  {}
+  {
+    // add the immutable functions to the diamond
+  }
 
   function approveERC20TokenToContract(
     IERC20 _token,

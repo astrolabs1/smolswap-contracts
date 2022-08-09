@@ -18,6 +18,8 @@ import "../../../stratos/ExchangeV5.sol";
 
 import "../../structs/BuyOrder.sol";
 
+// import "@forge-std/src/Console2.sol";
+
 error InvalidNFTAddress();
 error FirstBuyReverted(bytes message);
 error AllReverted();
@@ -56,11 +58,15 @@ library LibSweep {
 
   struct SweepStorage {
     // owner of the contract
+    // IERC20 weth;
     uint256 sweepFee;
-    IERC20 defaultPaymentToken;
-    IERC20 weth;
-    ITroveMarketplace troveMarketplace;
-    ExchangeV5 stratosMarketplace;
+    IERC721 sweepNFT;
+    // IERC20 defaultPaymentToken;
+
+    address[] marketplaces;
+    address[] paymentTokens;
+    // ITroveMarketplace troveMarketplace;
+    // ExchangeV5 stratosMarketplace;
   }
 
   uint256 constant FEE_BASIS_POINTS = 1_000_000;
@@ -68,8 +74,29 @@ library LibSweep {
   bytes4 internal constant INTERFACE_ID_ERC721 = 0x80ac58cd;
   bytes4 internal constant INTERFACE_ID_ERC1155 = 0xd9b67a26;
 
-  uint8 internal constant TROVE_ID = 1;
-  uint8 internal constant STRATOS_ID = 2;
+  uint16 internal constant TROVE_ID = 0;
+  uint16 internal constant STRATOS_ID = 1;
+
+  function _addMarketplace(address _marketplace, address _paymentToken)
+    internal
+  {
+    require(_marketplace != address(0));
+    diamondStorage().marketplaces.push(_marketplace);
+    diamondStorage().paymentTokens.push(_paymentToken);
+
+    if (_paymentToken != address(0)) {
+      IERC20(_paymentToken).approve(_marketplace, type(uint256).max);
+    }
+  }
+
+  function _setMarketplace(
+    uint256 _marketplaceId,
+    address _marketplace,
+    address _paymentToken
+  ) internal {
+    diamondStorage().marketplaces[_marketplaceId] = _marketplace;
+    diamondStorage().paymentTokens[_marketplaceId] = _paymentToken;
+  }
 
   function diamondStorage() internal pure returns (SweepStorage storage ds) {
     bytes32 position = DIAMOND_STORAGE_POSITION;
@@ -97,9 +124,10 @@ library LibSweep {
     internal
     returns (bool success, bytes memory data)
   {
-    ITroveMarketplace marketplace = LibSweep.diamondStorage().troveMarketplace;
-    (success, data) = address(marketplace).call{
-      value: (_buyOrders[0].paymentToken == marketplace.weth())
+    address marketplace = LibSweep.diamondStorage().marketplaces[TROVE_ID];
+    (success, data) = marketplace.call{
+      value: (_buyOrders[0].paymentToken ==
+        ITroveMarketplace(marketplace).weth())
         ? (_buyOrders[0].maxPricePerItem * _buyOrders[0].quantity)
         : 0
     }(abi.encodeWithSelector(ITroveMarketplace.buyItems.selector, _buyOrders));
@@ -111,8 +139,7 @@ library LibSweep {
     bytes memory signature,
     address payable buyer
   ) internal returns (bool success, bytes memory data) {
-    (success, data) = address(LibSweep.diamondStorage().stratosMarketplace)
-      .call{
+    (success, data) = LibSweep.diamondStorage().marketplaces[STRATOS_ID].call{
       value: (paymentERC20 == address(0))
         ? (_buyOrder.price * _buyOrder.quantity)
         : 0
@@ -139,8 +166,7 @@ library LibSweep {
     bytes memory signature,
     address payable buyer
   ) internal returns (bool success, bytes memory data) {
-    (success, data) = address(LibSweep.diamondStorage().stratosMarketplace)
-      .call{
+    (success, data) = LibSweep.diamondStorage().marketplaces[STRATOS_ID].call{
       value: (_buyOrder.paymentToken == address(0))
         ? (_buyOrder.price * _buyOrder.quantity)
         : 0

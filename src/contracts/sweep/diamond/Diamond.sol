@@ -12,6 +12,8 @@ import {LibDiamond} from "./libraries/LibDiamond.sol";
 import {LibOwnership} from "./libraries/LibOwnership.sol";
 import {IDiamondCut} from "./interfaces/IDiamondCut.sol";
 
+// import "@forge-std/src/Test.sol";
+
 contract Diamond {
   constructor(address _contractOwner, address _diamondCutFacet) payable {
     LibOwnership.setContractOwner(_contractOwner);
@@ -32,8 +34,8 @@ contract Diamond {
   // function if a facet is found and return any value.
   fallback() external payable {
     LibDiamond.DiamondStorage storage ds;
-    bytes32 position = LibDiamond.DIAMOND_STORAGE_POSITION;
     // get diamond storage
+    bytes32 position = LibDiamond.DIAMOND_STORAGE_POSITION;
     assembly {
       ds.slot := position
     }
@@ -59,5 +61,6 @@ contract Diamond {
     }
   }
 
-  receive() external payable {}
+  // receive() external payable {
+  // }
 }
