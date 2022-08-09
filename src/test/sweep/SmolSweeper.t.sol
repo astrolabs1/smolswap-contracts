@@ -21,6 +21,8 @@ import "@contracts/sweep/diamond/facets/OwnershipFacet.sol";
 import "@contracts/sweep/diamond/facets/sweep/SweepFacet.sol";
 import {DiamondLoupeFacet} from "@contracts/sweep/diamond/facets/DiamondLoupeFacet.sol";
 import "@contracts/sweep/diamond/Diamond.sol";
+import "@contracts/sweep/SmolSweepDiamondInit.sol";
+import {DiamondInit} from "@contracts/sweep/diamond/upgradeInitializers/DiamondInit.sol";
 
 contract SmolSweeperTest is Test, AERC721Receiver, IDiamondCut {
   SmolSweeper public smolsweep;
@@ -81,6 +83,9 @@ contract SmolSweeperTest is Test, AERC721Receiver, IDiamondCut {
     ownerF = new OwnershipFacet();
     sweepF = new SweepFacet();
 
+    init = new SmolSweepDiamondInit();
+    // init = new DiamondInit();
+
     //build cut struct
     FacetCut[] memory cut = new FacetCut[](3);
 
@@ -108,8 +113,14 @@ contract SmolSweeperTest is Test, AERC721Receiver, IDiamondCut {
       })
     );
 
+    // bytes memory cutBytes = new bytes();
+    // cutBytes.push(IDiamondInit.init.selector);
     //upgrade diamond
-    IDiamondCut(address(smolsweep)).diamondCut(cut, address(init), "");
+    IDiamondCut(address(smolsweep)).diamondCut(
+      cut,
+      address(init),
+      abi.encodePacked(IDiamondInit.init.selector)
+    );
 
     SweepFacet(address(smolsweep)).addMarketplace(
       address(trove),
