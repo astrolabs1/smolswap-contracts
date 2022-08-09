@@ -45,62 +45,66 @@ contract ABaseSweeperFacet is OwnershipModifers {
     LibSweep.diamondStorage().sweepFee = _fee;
   }
 
-  function _approveERC20TokenToContract(
-    IERC20 _token,
-    address _contract,
-    uint256 _amount
-  ) internal {
-    _token.safeApprove(address(_contract), uint256(_amount));
+  function getFee() external view onlyOwner returns (uint256) {
+    return LibSweep.diamondStorage().sweepFee;
   }
 
-  function approveERC20TokenToContract(
-    IERC20 _token,
-    address _contract,
-    uint256 _amount
-  ) external onlyOwner {
-    _approveERC20TokenToContract(_token, _contract, _amount);
-  }
+  // function _approveERC20TokenToContract(
+  //   IERC20 _token,
+  //   address _contract,
+  //   uint256 _amount
+  // ) internal {
+  //   _token.safeApprove(address(_contract), uint256(_amount));
+  // }
 
-  // rescue functions
-  // those have not been tested yet
-  function transferETHTo(address payable _to, uint256 _amount)
-    external
-    onlyOwner
-  {
-    _to.transfer(_amount);
-  }
+  // function approveERC20TokenToContract(
+  //   IERC20 _token,
+  //   address _contract,
+  //   uint256 _amount
+  // ) external onlyOwner {
+  //   _approveERC20TokenToContract(_token, _contract, _amount);
+  // }
 
-  function transferERC20TokenTo(
-    IERC20 _token,
-    address _address,
-    uint256 _amount
-  ) external onlyOwner {
-    _token.safeTransfer(address(_address), uint256(_amount));
-  }
+  // // rescue functions
+  // // those have not been tested yet
+  // function transferETHTo(address payable _to, uint256 _amount)
+  //   external
+  //   onlyOwner
+  // {
+  //   _to.transfer(_amount);
+  // }
 
-  function transferERC721To(
-    IERC721 _token,
-    address _to,
-    uint256 _tokenId
-  ) external onlyOwner {
-    _token.safeTransferFrom(address(this), _to, _tokenId);
-  }
+  // function transferERC20TokenTo(
+  //   IERC20 _token,
+  //   address _address,
+  //   uint256 _amount
+  // ) external onlyOwner {
+  //   _token.safeTransfer(address(_address), uint256(_amount));
+  // }
 
-  function transferERC1155To(
-    IERC1155 _token,
-    address _to,
-    uint256[] calldata _tokenIds,
-    uint256[] calldata _amounts,
-    bytes calldata _data
-  ) external onlyOwner {
-    _token.safeBatchTransferFrom(
-      address(this),
-      _to,
-      _tokenIds,
-      _amounts,
-      _data
-    );
-  }
+  // function transferERC721To(
+  //   IERC721 _token,
+  //   address _to,
+  //   uint256 _tokenId
+  // ) external onlyOwner {
+  //   _token.safeTransferFrom(address(this), _to, _tokenId);
+  // }
+
+  // function transferERC1155To(
+  //   IERC1155 _token,
+  //   address _to,
+  //   uint256[] calldata _tokenIds,
+  //   uint256[] calldata _amounts,
+  //   bytes calldata _data
+  // ) external onlyOwner {
+  //   _token.safeBatchTransferFrom(
+  //     address(this),
+  //     _to,
+  //     _tokenIds,
+  //     _amounts,
+  //     _data
+  //   );
+  // }
 
   function TROVE_ID() external pure returns (uint256) {
     return LibSweep.TROVE_ID;
@@ -141,52 +145,18 @@ contract ABaseSweeperFacet is OwnershipModifers {
     return LibSweep.diamondStorage().paymentTokens[_marketplaceId];
   }
 
-  function sumTotalPrice(BuyOrder[] memory _buyOrders)
-    internal
-    pure
-    returns (uint256 totalPrice)
-  {
-    uint256 i = 0;
-    uint256 length = _buyOrders.length;
-    for (; i < length; ) {
-      totalPrice += _buyOrders[i].quantity * _buyOrders[i].price;
-      unchecked {
-        ++i;
-      }
-    }
-  }
-
-  function _maxSpendWithoutFees(uint256[] memory _maxSpendIncFees)
-    internal
-    view
-    returns (uint256[] memory maxSpendIncFeesAmount)
-  {
-    maxSpendIncFeesAmount = new uint256[](_maxSpendIncFees.length);
-
-    uint256 maxSpendLength = _maxSpendIncFees.length;
-    for (uint256 i = 0; i < maxSpendLength; ) {
-      maxSpendIncFeesAmount[i] = LibSweep._calculateAmountWithoutFees(
-        _maxSpendIncFees[i]
-      );
-      unchecked {
-        ++i;
-      }
-    }
-  }
-
-  function _getTokenIndex(
-    address[] memory _paymentTokens,
-    address _buyOrderPaymentToken
-  ) internal pure returns (uint256 j) {
-    uint256 paymentTokensLength = _paymentTokens.length;
-    for (; j < paymentTokensLength; ) {
-      if (_paymentTokens[j] == _buyOrderPaymentToken) {
-        return j;
-      }
-      unchecked {
-        ++j;
-      }
-    }
-    revert PaymentTokenNotGiven(_buyOrderPaymentToken);
-  }
+  // function sumTotalPrice(BuyOrder[] memory _buyOrders)
+  //   internal
+  //   pure
+  //   returns (uint256 totalPrice)
+  // {
+  //   uint256 i = 0;
+  //   uint256 length = _buyOrders.length;
+  //   for (; i < length; ) {
+  //     totalPrice += _buyOrders[i].quantity * _buyOrders[i].price;
+  //     unchecked {
+  //       ++i;
+  //     }
+  //   }
+  // }
 }

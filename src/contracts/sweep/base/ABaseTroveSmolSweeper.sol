@@ -646,7 +646,7 @@ abstract contract ABaseTroveSmolSweeper is ABaseSmolSweeper, ITroveSmolSweeper {
   function _getTokenIndex(
     address[] memory _inputTokenAddresses,
     address _buyOrderPaymentToken
-  ) internal returns (uint256 j) {
+  ) internal pure returns (uint256 j) {
     for (; j < _inputTokenAddresses.length; ) {
       if (_inputTokenAddresses[j] == _buyOrderPaymentToken) {
         return j;

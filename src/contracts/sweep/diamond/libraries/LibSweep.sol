@@ -187,4 +187,225 @@ library LibSweep {
       )
     );
   }
+
+  function _maxSpendWithoutFees(uint256[] memory _maxSpendIncFees)
+    internal
+    view
+    returns (uint256[] memory maxSpendIncFeesAmount)
+  {
+    maxSpendIncFeesAmount = new uint256[](_maxSpendIncFees.length);
+
+    uint256 maxSpendLength = _maxSpendIncFees.length;
+    for (uint256 i = 0; i < maxSpendLength; ) {
+      maxSpendIncFeesAmount[i] = LibSweep._calculateAmountWithoutFees(
+        _maxSpendIncFees[i]
+      );
+      unchecked {
+        ++i;
+      }
+    }
+  }
+
+  function _getTokenIndex(
+    address[] memory _paymentTokens,
+    address _buyOrderPaymentToken
+  ) internal pure returns (uint256 j) {
+    uint256 paymentTokensLength = _paymentTokens.length;
+    for (; j < paymentTokensLength; ) {
+      if (_paymentTokens[j] == _buyOrderPaymentToken) {
+        return j;
+      }
+      unchecked {
+        ++j;
+      }
+    }
+    revert PaymentTokenNotGiven(_buyOrderPaymentToken);
+  }
+
+  function _troveOrder(
+    BuyOrder memory _buyOrder,
+    uint64 _quantityToBuy,
+    address _paymentToken,
+    bool _usingETH,
+    uint16 _inputSettingsBitFlag
+  ) internal returns (uint256 spentAmount, bool success) {
+    BuyItemParams[] memory buyItemParams = new BuyItemParams[](1);
+    buyItemParams[0] = BuyItemParams(
+      _buyOrder.assetAddress,
+      _buyOrder.tokenId,
+      _buyOrder.seller,
+      uint64(_quantityToBuy),
+      uint128(_buyOrder.price),
+      _paymentToken,
+      _usingETH
+    );
+
+    address marketplace = LibSweep.diamondStorage().marketplaces[
+      LibSweep.TROVE_ID
+    ];
+    (bool spentSuccess, bytes memory data) = marketplace.call{
+      value: (_paymentToken == ITroveMarketplace(marketplace).weth())
+        ? (uint128(_buyOrder.price) * _quantityToBuy)
+        : 0
+    }(
+      abi.encodeWithSelector(ITroveMarketplace.buyItems.selector, buyItemParams)
+    );
+
+    // (bool spentSuccess, bytes memory data) = LibSweep.tryBuyItemTrove(
+    //   buyItemParams
+    // );
+
+    if (spentSuccess) {
+      if (
+        SettingsBitFlag.checkSetting(
+          _inputSettingsBitFlag,
+          SettingsBitFlag.EMIT_SUCCESS_EVENT_LOGS
+        )
+      ) {
+        emit LibSweep.SuccessBuyItem(
+          _buyOrder.assetAddress,
+          _buyOrder.tokenId,
+          payable(msg.sender),
+          _quantityToBuy,
+          _buyOrder.price
+        );
+      }
+
+      if (
+        IERC165(_buyOrder.assetAddress).supportsInterface(
+          LibSweep.INTERFACE_ID_ERC721
+        )
+      ) {
+        IERC721(_buyOrder.assetAddress).safeTransferFrom(
+          address(this),
+          msg.sender,
+          _buyOrder.tokenId
+        );
+      } else if (
+        IERC165(_buyOrder.assetAddress).supportsInterface(
+          LibSweep.INTERFACE_ID_ERC1155
+        )
+      ) {
+        IERC1155(_buyOrder.assetAddress).safeTransferFrom(
+          address(this),
+          msg.sender,
+          _buyOrder.tokenId,
+          _quantityToBuy,
+          ""
+        );
+      } else revert InvalidNFTAddress();
+
+      return (_buyOrder.price * _quantityToBuy, true);
+    } else {
+      if (
+        SettingsBitFlag.checkSetting(
+          _inputSettingsBitFlag,
+          SettingsBitFlag.EMIT_FAILURE_EVENT_LOGS
+        )
+      ) {
+        emit LibSweep.CaughtFailureBuyItem(
+          _buyOrder.assetAddress,
+          _buyOrder.tokenId,
+          payable(msg.sender),
+          _quantityToBuy,
+          _buyOrder.price,
+          data
+        );
+      }
+      if (
+        SettingsBitFlag.checkSetting(
+          _inputSettingsBitFlag,
+          SettingsBitFlag.MARKETPLACE_BUY_ITEM_REVERTED
+        )
+      ) revert FirstBuyReverted(data);
+    }
+    return (0, false);
+  }
+
+  function _troveOrderMultiToken(
+    MultiTokenBuyOrder memory _buyOrder,
+    uint64 _quantityToBuy,
+    uint16 _inputSettingsBitFlag
+  ) internal returns (uint256 spentAmount, bool success) {
+    BuyItemParams[] memory buyItemParams = new BuyItemParams[](1);
+    buyItemParams[0] = BuyItemParams(
+      _buyOrder.assetAddress,
+      _buyOrder.tokenId,
+      _buyOrder.seller,
+      uint64(_quantityToBuy),
+      uint128(_buyOrder.price),
+      _buyOrder.paymentToken,
+      _buyOrder.usingETH
+    );
+
+    (bool spentSuccess, bytes memory data) = LibSweep.tryBuyItemTrove(
+      buyItemParams
+    );
+
+    if (spentSuccess) {
+      if (
+        SettingsBitFlag.checkSetting(
+          _inputSettingsBitFlag,
+          SettingsBitFlag.EMIT_SUCCESS_EVENT_LOGS
+        )
+      ) {
+        emit LibSweep.SuccessBuyItem(
+          _buyOrder.assetAddress,
+          _buyOrder.tokenId,
+          payable(msg.sender),
+          _quantityToBuy,
+          _buyOrder.price
+        );
+      }
+
+      if (
+        IERC165(_buyOrder.assetAddress).supportsInterface(
+          LibSweep.INTERFACE_ID_ERC721
+        )
+      ) {
+        IERC721(_buyOrder.assetAddress).safeTransferFrom(
+          address(this),
+          msg.sender,
+          _buyOrder.tokenId
+        );
+      } else if (
+        IERC165(_buyOrder.assetAddress).supportsInterface(
+          LibSweep.INTERFACE_ID_ERC1155
+        )
+      ) {
+        IERC1155(_buyOrder.assetAddress).safeTransferFrom(
+          address(this),
+          msg.sender,
+          _buyOrder.tokenId,
+          _quantityToBuy,
+          ""
+        );
+      } else revert InvalidNFTAddress();
+
+      return (_buyOrder.price * _quantityToBuy, true);
+    } else {
+      if (
+        SettingsBitFlag.checkSetting(
+          _inputSettingsBitFlag,
+          SettingsBitFlag.EMIT_FAILURE_EVENT_LOGS
+        )
+      ) {
+        emit LibSweep.CaughtFailureBuyItem(
+          _buyOrder.assetAddress,
+          _buyOrder.tokenId,
+          payable(msg.sender),
+          _quantityToBuy,
+          _buyOrder.price,
+          data
+        );
+      }
+      if (
+        SettingsBitFlag.checkSetting(
+          _inputSettingsBitFlag,
+          SettingsBitFlag.MARKETPLACE_BUY_ITEM_REVERTED
+        )
+      ) revert FirstBuyReverted(data);
+    }
+    return (0, false);
+  }
 }

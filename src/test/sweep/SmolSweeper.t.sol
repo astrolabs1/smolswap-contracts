@@ -87,7 +87,7 @@ contract SmolSweeperTest is Test, AERC721Receiver, IDiamondCut {
     // init = new DiamondInit();
 
     //build cut struct
-    FacetCut[] memory cut = new FacetCut[](3);
+    FacetCut[] memory cut = new FacetCut[](4);
 
     cut[0] = (
       FacetCut({
@@ -113,8 +113,14 @@ contract SmolSweeperTest is Test, AERC721Receiver, IDiamondCut {
       })
     );
 
-    // bytes memory cutBytes = new bytes();
-    // cutBytes.push(IDiamondInit.init.selector);
+    cut[3] = (
+      FacetCut({
+        facetAddress: address(smolsweep),
+        action: FacetCutAction.Add,
+        functionSelectors: generateSelectors("SmolSweeper")
+      })
+    );
+
     //upgrade diamond
     IDiamondCut(address(smolsweep)).diamondCut(
       cut,
@@ -342,10 +348,6 @@ contract SmolSweeperTest is Test, AERC721Receiver, IDiamondCut {
       address(weth)
     );
     vm.stopPrank();
-
-    ITroveMarketplace.ListingOrBid memory listing = ITroveMarketplace(
-      SweepFacet(address(smolsweep)).getMarketplace(LibSweep.TROVE_ID)
-    ).listings(address(erc721ETH), tokenId, SELLERS[0]);
 
     BuyOrder[] memory buyOrders = new BuyOrder[](1);
     buyOrders[0] = BuyOrder(

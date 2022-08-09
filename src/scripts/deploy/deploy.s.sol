@@ -1,5 +1,5 @@
-// // SPDX-License-Identifier: UNLICENSED
-// pragma solidity ^0.8.14;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.14;
 
 // import "@forge-std/src/Script.sol";
 // import "@contracts/sweep/SmolSweeper.sol";

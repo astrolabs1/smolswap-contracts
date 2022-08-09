@@ -121,7 +121,7 @@ contract SweepFacet is OwnershipModifers, ISmolSweeper, ABaseSweeperFacet {
         }
 
         // buy item
-        (uint256 spentAmount, bool success) = _troveOrder(
+        (uint256 spentAmount, bool success) = LibSweep._troveOrder(
           _buyOrders[i],
           quantityToBuy,
           _paymentToken,
@@ -256,7 +256,7 @@ contract SweepFacet is OwnershipModifers, ISmolSweeper, ABaseSweeperFacet {
         _signatures,
         _inputSettingsBitFlag,
         _paymentTokens,
-        _maxSpendWithoutFees(_maxSpendIncFees)
+        LibSweep._maxSpendWithoutFees(_maxSpendIncFees)
       );
 
     // transfer back failed payment tokens to the buyer
@@ -293,7 +293,10 @@ contract SweepFacet is OwnershipModifers, ISmolSweeper, ABaseSweeperFacet {
     totalSpentAmounts = new uint256[](_paymentTokens.length);
     // // buy all assets
     for (uint256 i = 0; i < _buyOrders.length; ) {
-      uint256 j = _getTokenIndex(_paymentTokens, _buyOrders[i].paymentToken);
+      uint256 j = LibSweep._getTokenIndex(
+        _paymentTokens,
+        _buyOrders[i].paymentToken
+      );
 
       if (_buyOrders[i].marketplaceId == LibSweep.TROVE_ID) {
         // check if the listing exists
@@ -334,7 +337,7 @@ contract SweepFacet is OwnershipModifers, ISmolSweeper, ABaseSweeperFacet {
         }
 
         // buy item
-        (uint256 spentAmount, bool success) = _troveOrderMultiToken(
+        (uint256 spentAmount, bool success) = LibSweep._troveOrderMultiToken(
           _buyOrders[i],
           quantityToBuy,
           _inputSettingsBitFlag
@@ -966,191 +969,4 @@ contract SweepFacet is OwnershipModifers, ISmolSweeper, ABaseSweeperFacet {
   //     }
   //   }
   // }
-
-  function _troveOrder(
-    BuyOrder memory _buyOrder,
-    uint64 _quantityToBuy,
-    address _paymentToken,
-    bool _usingETH,
-    uint16 _inputSettingsBitFlag
-  ) internal returns (uint256 spentAmount, bool success) {
-    BuyItemParams[] memory buyItemParams = new BuyItemParams[](1);
-    buyItemParams[0] = BuyItemParams(
-      _buyOrder.assetAddress,
-      _buyOrder.tokenId,
-      _buyOrder.seller,
-      uint64(_quantityToBuy),
-      uint128(_buyOrder.price),
-      _paymentToken,
-      _usingETH
-    );
-
-    address marketplace = LibSweep.diamondStorage().marketplaces[
-      LibSweep.TROVE_ID
-    ];
-    (bool spentSuccess, bytes memory data) = marketplace.call{
-      value: (_paymentToken == ITroveMarketplace(marketplace).weth())
-        ? (uint128(_buyOrder.price) * _quantityToBuy)
-        : 0
-    }(
-      abi.encodeWithSelector(ITroveMarketplace.buyItems.selector, buyItemParams)
-    );
-
-    // (bool spentSuccess, bytes memory data) = LibSweep.tryBuyItemTrove(
-    //   buyItemParams
-    // );
-
-    if (spentSuccess) {
-      if (
-        SettingsBitFlag.checkSetting(
-          _inputSettingsBitFlag,
-          SettingsBitFlag.EMIT_SUCCESS_EVENT_LOGS
-        )
-      ) {
-        emit LibSweep.SuccessBuyItem(
-          _buyOrder.assetAddress,
-          _buyOrder.tokenId,
-          payable(msg.sender),
-          _quantityToBuy,
-          _buyOrder.price
-        );
-      }
-
-      if (
-        IERC165(_buyOrder.assetAddress).supportsInterface(
-          LibSweep.INTERFACE_ID_ERC721
-        )
-      ) {
-        IERC721(_buyOrder.assetAddress).safeTransferFrom(
-          address(this),
-          msg.sender,
-          _buyOrder.tokenId
-        );
-      } else if (
-        IERC165(_buyOrder.assetAddress).supportsInterface(
-          LibSweep.INTERFACE_ID_ERC1155
-        )
-      ) {
-        IERC1155(_buyOrder.assetAddress).safeTransferFrom(
-          address(this),
-          msg.sender,
-          _buyOrder.tokenId,
-          _quantityToBuy,
-          ""
-        );
-      } else revert InvalidNFTAddress();
-
-      return (_buyOrder.price * _quantityToBuy, true);
-    } else {
-      if (
-        SettingsBitFlag.checkSetting(
-          _inputSettingsBitFlag,
-          SettingsBitFlag.EMIT_FAILURE_EVENT_LOGS
-        )
-      ) {
-        emit LibSweep.CaughtFailureBuyItem(
-          _buyOrder.assetAddress,
-          _buyOrder.tokenId,
-          payable(msg.sender),
-          _quantityToBuy,
-          _buyOrder.price,
-          data
-        );
-      }
-      if (
-        SettingsBitFlag.checkSetting(
-          _inputSettingsBitFlag,
-          SettingsBitFlag.MARKETPLACE_BUY_ITEM_REVERTED
-        )
-      ) revert FirstBuyReverted(data);
-    }
-    return (0, false);
-  }
-
-  function _troveOrderMultiToken(
-    MultiTokenBuyOrder memory _buyOrder,
-    uint64 _quantityToBuy,
-    uint16 _inputSettingsBitFlag
-  ) internal returns (uint256 spentAmount, bool success) {
-    BuyItemParams[] memory buyItemParams = new BuyItemParams[](1);
-    buyItemParams[0] = BuyItemParams(
-      _buyOrder.assetAddress,
-      _buyOrder.tokenId,
-      _buyOrder.seller,
-      uint64(_quantityToBuy),
-      uint128(_buyOrder.price),
-      _buyOrder.paymentToken,
-      _buyOrder.usingETH
-    );
-
-    (bool spentSuccess, bytes memory data) = LibSweep.tryBuyItemTrove(
-      buyItemParams
-    );
-
-    if (spentSuccess) {
-      if (
-        SettingsBitFlag.checkSetting(
-          _inputSettingsBitFlag,
-          SettingsBitFlag.EMIT_SUCCESS_EVENT_LOGS
-        )
-      ) {
-        emit LibSweep.SuccessBuyItem(
-          _buyOrder.assetAddress,
-          _buyOrder.tokenId,
-          payable(msg.sender),
-          _quantityToBuy,
-          _buyOrder.price
-        );
-      }
-
-      if (
-        IERC165(_buyOrder.assetAddress).supportsInterface(
-          LibSweep.INTERFACE_ID_ERC721
-        )
-      ) {
-        IERC721(_buyOrder.assetAddress).safeTransferFrom(
-          address(this),
-          msg.sender,
-          _buyOrder.tokenId
-        );
-      } else if (
-        IERC165(_buyOrder.assetAddress).supportsInterface(
-          LibSweep.INTERFACE_ID_ERC1155
-        )
-      ) {
-        IERC1155(_buyOrder.assetAddress).safeTransferFrom(
-          address(this),
-          msg.sender,
-          _buyOrder.tokenId,
-          _quantityToBuy,
-          ""
-        );
-      } else revert InvalidNFTAddress();
-
-      return (_buyOrder.price * _quantityToBuy, true);
-    } else {
-      if (
-        SettingsBitFlag.checkSetting(
-          _inputSettingsBitFlag,
-          SettingsBitFlag.EMIT_FAILURE_EVENT_LOGS
-        )
-      ) {
-        emit LibSweep.CaughtFailureBuyItem(
-          _buyOrder.assetAddress,
-          _buyOrder.tokenId,
-          payable(msg.sender),
-          _quantityToBuy,
-          _buyOrder.price,
-          data
-        );
-      }
-      if (
-        SettingsBitFlag.checkSetting(
-          _inputSettingsBitFlag,
-          SettingsBitFlag.MARKETPLACE_BUY_ITEM_REVERTED
-        )
-      ) revert FirstBuyReverted(data);
-    }
-    return (0, false);
-  }
 }

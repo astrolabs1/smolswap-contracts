@@ -60,35 +60,35 @@ contract SmolSweeper is Diamond, ANFTReceiver2, OwnershipModifers {
     _to.transfer(_amount);
   }
 
-  function transferERC20TokenTo(
-    IERC20 _token,
-    address _address,
-    uint256 _amount
-  ) external onlyOwner {
-    _token.safeTransfer(address(_address), uint256(_amount));
-  }
+  // function transferERC20TokenTo(
+  //   IERC20 _token,
+  //   address _address,
+  //   uint256 _amount
+  // ) external onlyOwner {
+  //   _token.safeTransfer(address(_address), uint256(_amount));
+  // }
 
-  function transferERC721To(
-    IERC721 _token,
-    address _to,
-    uint256 _tokenId
-  ) external onlyOwner {
-    _token.safeTransferFrom(address(this), _to, _tokenId);
-  }
+  // function transferERC721To(
+  //   IERC721 _token,
+  //   address _to,
+  //   uint256 _tokenId
+  // ) external onlyOwner {
+  //   _token.safeTransferFrom(address(this), _to, _tokenId);
+  // }
 
-  function transferERC1155To(
-    IERC1155 _token,
-    address _to,
-    uint256[] calldata _tokenIds,
-    uint256[] calldata _amounts,
-    bytes calldata _data
-  ) external onlyOwner {
-    _token.safeBatchTransferFrom(
-      address(this),
-      _to,
-      _tokenIds,
-      _amounts,
-      _data
-    );
-  }
+  // function transferERC1155To(
+  //   IERC1155 _token,
+  //   address _to,
+  //   uint256[] calldata _tokenIds,
+  //   uint256[] calldata _amounts,
+  //   bytes calldata _data
+  // ) external onlyOwner {
+  //   _token.safeBatchTransferFrom(
+  //     address(this),
+  //     _to,
+  //     _tokenIds,
+  //     _amounts,
+  //     _data
+  //   );
+  // }
 }
