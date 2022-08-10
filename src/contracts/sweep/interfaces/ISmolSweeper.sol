@@ -30,7 +30,6 @@ import "../structs/BuyOrder.sol";
 interface ISmolSweeper {
   function buyItemsSingleToken(
     BuyOrder[] calldata _buyOrders,
-    bytes[] calldata _signatures,
     bool _usingETH,
     uint16 _inputSettingsBitFlag,
     address _paymentToken,
@@ -39,7 +38,6 @@ interface ISmolSweeper {
 
   function buyItemsMultiTokens(
     MultiTokenBuyOrder[] calldata _buyOrders,
-    bytes[] calldata _signatures,
     uint16 _inputSettingsBitFlag,
     address[] calldata _paymentTokens,
     uint256[] calldata _maxSpendIncFees

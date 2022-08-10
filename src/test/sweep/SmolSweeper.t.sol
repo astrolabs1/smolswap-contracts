@@ -236,17 +236,15 @@ contract SmolSweeperTest is Test, AERC721Receiver, IDiamondCut {
       0,
       0,
       0,
-      LibSweep.TROVE_ID
+      LibSweep.TROVE_ID,
+      new bytes(0)
     );
 
-    bytes[] memory signatures = new bytes[](1);
-    signatures[0] = new bytes(0);
     uint256 sellerBalanceMagicBefore = magic.balanceOf(SELLERS[0]);
     uint256 buyerBalanceMagicBefore = magic.balanceOf(BUYER);
     vm.startPrank(BUYER, BUYER);
     ISmolSweeper(address(smolsweep)).buyItemsSingleToken(
       buyOrders,
-      signatures,
       false,
       0,
       address(magic),
@@ -298,12 +296,10 @@ contract SmolSweeperTest is Test, AERC721Receiver, IDiamondCut {
       0,
       0,
       LibSweep.TROVE_ID,
+      new bytes(0),
       address(magic),
       false
     );
-
-    bytes[] memory signatures = new bytes[](1);
-    signatures[0] = new bytes(0);
 
     address[] memory tokens = new address[](1);
     tokens[0] = address(magic);
@@ -313,7 +309,6 @@ contract SmolSweeperTest is Test, AERC721Receiver, IDiamondCut {
     uint256 buyerBalanceMagicBefore = magic.balanceOf(BUYER);
     ISmolSweeper(address(smolsweep)).buyItemsMultiTokens(
       buyOrders,
-      signatures,
       0,
       tokens,
       amounts
@@ -359,19 +354,17 @@ contract SmolSweeperTest is Test, AERC721Receiver, IDiamondCut {
       0,
       0,
       0,
-      LibSweep.TROVE_ID
+      LibSweep.TROVE_ID,
+      new bytes(0)
     );
 
     uint256 maxSpend = 1e18;
-    bytes[] memory signatures = new bytes[](1);
-    signatures[0] = new bytes(0);
     payable(address(BUYER)).transfer(maxSpend);
     uint256 sellerBalanceETHBefore = SELLERS[0].balance;
     uint256 buyerBalanceETHBefore = BUYER.balance;
     vm.startPrank(BUYER, BUYER);
     ISmolSweeper(address(smolsweep)).buyItemsSingleToken{value: maxSpend}(
       buyOrders,
-      signatures,
       true,
       0,
       address(weth),
@@ -389,101 +382,113 @@ contract SmolSweeperTest is Test, AERC721Receiver, IDiamondCut {
     assertEq(erc721ETH.balanceOf(SELLERS[0]), 0);
   }
 
-  // function test_buyItemsManyTokenUsingMagicAndETHSingleERC721() public {
-  //   magic.mint(BUYER, 1e18);
+  function test_buyItemsManyTokenTroveUsingMagicAndETHSingleERC721() public {
+    magic.mint(BUYER, 1e18);
 
-  //   erc721.safeMint(SELLERS[0]);
-  //   erc721ETH.safeMint(SELLERS[1]);
-  //   uint256 tokenId = 0;
+    erc721.safeMint(SELLERS[0]);
+    erc721ETH.safeMint(SELLERS[1]);
+    uint256 tokenId = 0;
 
-  //   uint128 price0 = 1e9;
-  //   uint128 price1 = 1e9;
+    uint128 price0 = 1e9;
+    uint128 price1 = 1e9;
 
-  //   {
-  //     vm.startPrank(SELLERS[0], SELLERS[0]);
-  //     erc721.setApprovalForAll(address(trove), true);
-  //     trove.createListing(
-  //       address(erc721),
-  //       tokenId,
-  //       1,
-  //       price1,
-  //       uint64(block.timestamp + 100),
-  //       address(magic)
-  //     );
-  //     vm.stopPrank();
+    vm.startPrank(SELLERS[0], SELLERS[0]);
+    erc721.setApprovalForAll(address(trove), true);
+    trove.createListing(
+      address(erc721),
+      tokenId,
+      1,
+      price1,
+      uint64(block.timestamp + 100),
+      address(magic)
+    );
+    vm.stopPrank();
 
-  //     vm.startPrank(SELLERS[1], SELLERS[1]);
-  //     erc721ETH.setApprovalForAll(address(trove), true);
-  //     trove.createListing(
-  //       address(erc721ETH),
-  //       tokenId,
-  //       1,
-  //       price0,
-  //       uint64(block.timestamp + 100),
-  //       address(weth)
-  //     );
-  //     vm.stopPrank();
+    vm.startPrank(SELLERS[1], SELLERS[1]);
+    erc721ETH.setApprovalForAll(address(trove), true);
+    trove.createListing(
+      address(erc721ETH),
+      tokenId,
+      1,
+      price0,
+      uint64(block.timestamp + 100),
+      address(weth)
+    );
+    vm.stopPrank();
 
-  //     vm.prank(BUYER, BUYER);
-  //     magic.approve(address(smolsweep), 1e19);
-  //     BuyItemParams[] memory buyParams = new BuyItemParams[](2);
-  //     buyParams[0] = BuyItemParams(
-  //       address(erc721),
-  //       tokenId,
-  //       SELLERS[0],
-  //       1,
-  //       price0,
-  //       address(magic),
-  //       false
-  //     );
-  //     buyParams[1] = BuyItemParams(
-  //       address(erc721ETH),
-  //       tokenId,
-  //       SELLERS[1],
-  //       1,
-  //       price1,
-  //       address(weth),
-  //       true
-  //     );
+    vm.prank(BUYER, BUYER);
+    magic.approve(address(smolsweep), 1e19);
 
-  //     address[] memory tokens = new address[](2);
-  //     tokens[0] = address(magic);
-  //     tokens[1] = address(weth);
-  //     uint256[] memory amounts = new uint256[](2);
-  //     amounts[0] = price0;
-  //     amounts[1] = price1;
+    {
+      MultiTokenBuyOrder[] memory buyOrders = new MultiTokenBuyOrder[](2);
+      buyOrders[0] = MultiTokenBuyOrder(
+        address(erc721),
+        tokenId,
+        payable(SELLERS[0]),
+        1,
+        price0,
+        0,
+        0,
+        0,
+        LibSweep.TROVE_ID,
+        new bytes(0),
+        address(magic),
+        false
+      );
 
-  //     payable(BUYER).transfer(price1);
-  //     uint256 seller0BalanceMagicBefore = magic.balanceOf(SELLERS[0]);
-  //     uint256 seller1BalanceETHBefore = SELLERS[1].balance;
-  //     uint256 buyerBalanceMagicBefore = magic.balanceOf(BUYER);
-  //     uint256 buyerBalanceETHBefore = BUYER.balance;
+      buyOrders[0] = MultiTokenBuyOrder(
+        address(erc721ETH),
+        tokenId,
+        payable(SELLERS[0]),
+        1,
+        price1,
+        0,
+        0,
+        0,
+        LibSweep.TROVE_ID,
+        new bytes(0),
+        address(weth),
+        true
+      );
 
-  //     vm.prank(BUYER, BUYER);
-  //     ISmolSweeper(address(smolsweep)).buyItemsMultiTokens{value: price1}(
-  //       buyParams,
-  //       0,
-  //       tokens,
-  //       amounts
-  //     );
-  //     uint256 seller0BalanceMagicAfter = magic.balanceOf(SELLERS[0]);
-  //     uint256 seller1BalanceETHAfter = SELLERS[1].balance;
-  //     uint256 buyerBalanceMagicAfter = magic.balanceOf(BUYER);
-  //     uint256 buyerBalanceETHAfter = BUYER.balance;
+      address[] memory tokens = new address[](2);
+      tokens[0] = address(magic);
+      tokens[1] = address(weth);
+      uint256[] memory maxSpends = new uint256[](2);
+      maxSpends[0] = 1e18;
+      maxSpends[1] = 1e18;
 
-  //     assertEq(seller0BalanceMagicAfter - seller0BalanceMagicBefore, price0);
-  //     assertEq(seller1BalanceETHAfter - seller1BalanceETHBefore, price1);
-  //     assertEq(buyerBalanceMagicBefore - buyerBalanceMagicAfter, price0);
-  //     assertEq(buyerBalanceETHBefore - buyerBalanceETHAfter, price1);
-  //   }
+      payable(address(BUYER)).transfer(maxSpends[1]);
+      uint256 seller0BalanceMagicBefore = magic.balanceOf(SELLERS[0]);
+      uint256 buyerBalanceMagicBefore = magic.balanceOf(BUYER);
+      uint256 seller1BalanceETHBefore = SELLERS[0].balance;
+      uint256 buyerBalanceETHBefore = BUYER.balance;
+      vm.startPrank(BUYER, BUYER);
+      ISmolSweeper(address(smolsweep)).buyItemsMultiTokens{value: maxSpends[1]}(
+        buyOrders,
+        0,
+        tokens,
+        maxSpends
+      );
+      vm.stopPrank();
+      uint256 seller0BalanceMagicAfter = magic.balanceOf(SELLERS[0]);
+      uint256 buyerBalanceMagicAfter = magic.balanceOf(BUYER);
+      uint256 seller1BalanceETHAfter = SELLERS[0].balance;
+      uint256 buyerBalanceETHAfter = BUYER.balance;
 
-  //   assertEq(erc721.balanceOf(BUYER), 1);
-  //   assertEq(erc721.balanceOf(SELLERS[0]), 0);
-  //   assertEq(erc721.ownerOf(tokenId), BUYER);
-  //   assertEq(erc721ETH.balanceOf(BUYER), 1);
-  //   assertEq(erc721ETH.balanceOf(SELLERS[1]), 0);
-  //   assertEq(erc721ETH.ownerOf(tokenId), BUYER);
-  // }
+      assertEq(seller0BalanceMagicAfter - seller0BalanceMagicBefore, price0);
+      assertEq(seller1BalanceETHAfter - seller1BalanceETHBefore, price1);
+      assertEq(buyerBalanceMagicBefore - buyerBalanceMagicAfter, price0);
+      assertEq(buyerBalanceETHBefore - buyerBalanceETHAfter, price1);
+    }
+
+    assertEq(erc721.balanceOf(BUYER), 1);
+    assertEq(erc721.balanceOf(SELLERS[0]), 0);
+    assertEq(erc721.ownerOf(tokenId), BUYER);
+    assertEq(erc721ETH.balanceOf(BUYER), 1);
+    assertEq(erc721ETH.balanceOf(SELLERS[1]), 0);
+    assertEq(erc721ETH.ownerOf(tokenId), BUYER);
+  }
 
   // function test_sweepItemsSingleTokenSingleERC721() public {
   //   magic.mint(BUYER, 1e18);

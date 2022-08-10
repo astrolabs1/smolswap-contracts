@@ -144,19 +144,4 @@ contract ABaseSweeperFacet is OwnershipModifers {
   {
     return LibSweep.diamondStorage().paymentTokens[_marketplaceId];
   }
-
-  // function sumTotalPrice(BuyOrder[] memory _buyOrders)
-  //   internal
-  //   pure
-  //   returns (uint256 totalPrice)
-  // {
-  //   uint256 i = 0;
-  //   uint256 length = _buyOrders.length;
-  //   for (; i < length; ) {
-  //     totalPrice += _buyOrders[i].quantity * _buyOrders[i].price;
-  //     unchecked {
-  //       ++i;
-  //     }
-  //   }
-  // }
 }

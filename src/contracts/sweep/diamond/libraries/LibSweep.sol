@@ -136,34 +136,31 @@ library LibSweep {
   function tryBuyItemStratos(
     BuyOrder memory _buyOrder,
     address paymentERC20,
-    bytes memory signature,
-    address payable buyer
+    address buyer
   ) internal returns (bool success, bytes memory data) {
+    bytes memory encoded = abi.encodeWithSelector(
+      ExchangeV5.fillSellOrder.selector,
+      _buyOrder.seller,
+      _buyOrder.assetAddress,
+      _buyOrder.tokenId,
+      _buyOrder.startTime,
+      _buyOrder.expiration,
+      _buyOrder.price,
+      _buyOrder.quantity,
+      _buyOrder.createdAtBlockNumber,
+      paymentERC20,
+      _buyOrder.signature,
+      buyer
+    );
     (success, data) = LibSweep.diamondStorage().marketplaces[STRATOS_ID].call{
       value: (paymentERC20 == address(0))
         ? (_buyOrder.price * _buyOrder.quantity)
         : 0
-    }(
-      abi.encodeWithSelector(
-        ExchangeV5.fillSellOrder.selector,
-        _buyOrder.seller,
-        _buyOrder.assetAddress,
-        _buyOrder.tokenId,
-        _buyOrder.startTime,
-        _buyOrder.expiration,
-        _buyOrder.price,
-        _buyOrder.quantity,
-        _buyOrder.createdAtBlockNumber,
-        paymentERC20,
-        signature,
-        buyer
-      )
-    );
+    }(encoded);
   }
 
   function tryBuyItemStratosMulti(
     MultiTokenBuyOrder memory _buyOrder,
-    bytes memory signature,
     address payable buyer
   ) internal returns (bool success, bytes memory data) {
     (success, data) = LibSweep.diamondStorage().marketplaces[STRATOS_ID].call{
@@ -182,7 +179,7 @@ library LibSweep {
         _buyOrder.quantity,
         _buyOrder.createdAtBlockNumber,
         _buyOrder.paymentToken,
-        signature,
+        _buyOrder.signature,
         buyer
       )
     );

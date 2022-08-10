@@ -27,7 +27,6 @@ contract SweepFacet is OwnershipModifers, ISmolSweeper, ABaseSweeperFacet {
 
   function buyItemsSingleToken(
     BuyOrder[] calldata _buyOrders,
-    bytes[] calldata _signatures,
     bool _usingETH,
     uint16 _inputSettingsBitFlag,
     address _paymentToken,
@@ -51,7 +50,6 @@ contract SweepFacet is OwnershipModifers, ISmolSweeper, ABaseSweeperFacet {
     }
     (uint256 totalSpentAmount, uint256 successCount) = _buyItemsSingleToken(
       _buyOrders,
-      _signatures,
       _paymentToken,
       _usingETH,
       _inputSettingsBitFlag,
@@ -74,7 +72,6 @@ contract SweepFacet is OwnershipModifers, ISmolSweeper, ABaseSweeperFacet {
 
   function _buyItemsSingleToken(
     BuyOrder[] memory _buyOrders,
-    bytes[] memory _signatures,
     address _paymentToken,
     bool _usingETH,
     uint16 _inputSettingsBitFlag,
@@ -147,7 +144,6 @@ contract SweepFacet is OwnershipModifers, ISmolSweeper, ABaseSweeperFacet {
         (bool spentSuccess, bytes memory data) = LibSweep.tryBuyItemStratos(
           _buyOrders[i],
           _paymentToken,
-          _signatures[i],
           payable(msg.sender)
         );
 
@@ -168,30 +164,6 @@ contract SweepFacet is OwnershipModifers, ISmolSweeper, ABaseSweeperFacet {
           }
           totalSpentAmount += _buyOrders[i].price * _buyOrders[i].quantity;
           successCount++;
-
-          if (
-            IERC165(_buyOrders[i].assetAddress).supportsInterface(
-              LibSweep.INTERFACE_ID_ERC721
-            )
-          ) {
-            IERC721(_buyOrders[i].assetAddress).safeTransferFrom(
-              address(this),
-              msg.sender,
-              _buyOrders[i].tokenId
-            );
-          } else if (
-            IERC165(_buyOrders[i].assetAddress).supportsInterface(
-              LibSweep.INTERFACE_ID_ERC1155
-            )
-          ) {
-            IERC1155(_buyOrders[i].assetAddress).safeTransferFrom(
-              address(this),
-              msg.sender,
-              _buyOrders[i].tokenId,
-              _buyOrders[0].quantity,
-              ""
-            );
-          } else revert InvalidNFTAddress();
         } else {
           if (
             SettingsBitFlag.checkSetting(
@@ -221,7 +193,6 @@ contract SweepFacet is OwnershipModifers, ISmolSweeper, ABaseSweeperFacet {
 
   function buyItemsMultiTokens(
     MultiTokenBuyOrder[] calldata _buyOrders,
-    bytes[] calldata _signatures,
     uint16 _inputSettingsBitFlag,
     address[] calldata _paymentTokens,
     uint256[] calldata _maxSpendIncFees
@@ -253,7 +224,6 @@ contract SweepFacet is OwnershipModifers, ISmolSweeper, ABaseSweeperFacet {
       uint256 successCount
     ) = _buyItemsMultiTokens(
         _buyOrders,
-        _signatures,
         _inputSettingsBitFlag,
         _paymentTokens,
         LibSweep._maxSpendWithoutFees(_maxSpendIncFees)
@@ -282,7 +252,6 @@ contract SweepFacet is OwnershipModifers, ISmolSweeper, ABaseSweeperFacet {
 
   function _buyItemsMultiTokens(
     MultiTokenBuyOrder[] memory _buyOrders,
-    bytes[] memory _signatures,
     uint16 _inputSettingsBitFlag,
     address[] memory _paymentTokens,
     uint256[] memory _maxSpends
@@ -359,11 +328,7 @@ contract SweepFacet is OwnershipModifers, ISmolSweeper, ABaseSweeperFacet {
         ) break;
 
         (bool spentSuccess, bytes memory data) = LibSweep
-          .tryBuyItemStratosMulti(
-            _buyOrders[i],
-            _signatures[i],
-            payable(msg.sender)
-          );
+          .tryBuyItemStratosMulti(_buyOrders[i], payable(msg.sender));
 
         if (spentSuccess) {
           if (
@@ -382,30 +347,6 @@ contract SweepFacet is OwnershipModifers, ISmolSweeper, ABaseSweeperFacet {
           }
           totalSpentAmounts[j] += _buyOrders[i].price * _buyOrders[i].quantity;
           successCount++;
-
-          if (
-            IERC165(_buyOrders[i].assetAddress).supportsInterface(
-              LibSweep.INTERFACE_ID_ERC721
-            )
-          ) {
-            IERC721(_buyOrders[i].assetAddress).safeTransferFrom(
-              address(this),
-              msg.sender,
-              _buyOrders[i].tokenId
-            );
-          } else if (
-            IERC165(_buyOrders[i].assetAddress).supportsInterface(
-              LibSweep.INTERFACE_ID_ERC1155
-            )
-          ) {
-            IERC1155(_buyOrders[i].assetAddress).safeTransferFrom(
-              address(this),
-              msg.sender,
-              _buyOrders[i].tokenId,
-              _buyOrders[0].quantity,
-              ""
-            );
-          } else revert InvalidNFTAddress();
         } else {
           if (
             SettingsBitFlag.checkSetting(
