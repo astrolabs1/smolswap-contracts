@@ -20,7 +20,7 @@ import "./ABaseSweeperFacet.sol";
 
 import "../../../structs/BuyOrder.sol";
 
-// import "@forge-std/src/Test.sol";
+// import "@forge-std/src/console.sol";
 
 contract SweepFacet is OwnershipModifers, ISmolSweeper, ABaseSweeperFacet {
   using SafeERC20 for IERC20;
@@ -201,7 +201,7 @@ contract SweepFacet is OwnershipModifers, ISmolSweeper, ABaseSweeperFacet {
     // uint256 i = 0;
     uint256 length = _paymentTokens.length;
 
-    for (uint256 i = 0; i < length; ) {
+    for (uint256 i = 0; i < length; ++i) {
       if (_buyOrders[i].usingETH) {
         if (_maxSpendIncFees[i] != msg.value) revert InvalidMsgValue();
       } else {
@@ -212,10 +212,6 @@ contract SweepFacet is OwnershipModifers, ISmolSweeper, ABaseSweeperFacet {
           address(this),
           _maxSpendIncFees[i]
         );
-      }
-
-      unchecked {
-        ++i;
       }
     }
 
@@ -232,7 +228,7 @@ contract SweepFacet is OwnershipModifers, ISmolSweeper, ABaseSweeperFacet {
     // transfer back failed payment tokens to the buyer
     if (successCount == 0) revert AllReverted();
 
-    for (uint256 i = 0; i < length; ) {
+    for (uint256 i = 0; i < length; ++i) {
       uint256 refundAmount = _maxSpendIncFees[i] -
         (totalSpentAmount[i] + LibSweep._calculateFee(totalSpentAmount[i]));
 
@@ -242,10 +238,6 @@ contract SweepFacet is OwnershipModifers, ISmolSweeper, ABaseSweeperFacet {
       } else {
         IERC20(_paymentTokens[i]).safeTransfer(msg.sender, refundAmount);
         emit LibSweep.RefundedToken(_paymentTokens[i], refundAmount);
-      }
-
-      unchecked {
-        ++i;
       }
     }
   }
@@ -261,7 +253,7 @@ contract SweepFacet is OwnershipModifers, ISmolSweeper, ABaseSweeperFacet {
   {
     totalSpentAmounts = new uint256[](_paymentTokens.length);
     // // buy all assets
-    for (uint256 i = 0; i < _buyOrders.length; ) {
+    for (uint256 i = 0; i < _buyOrders.length; ++i) {
       uint256 j = LibSweep._getTokenIndex(
         _paymentTokens,
         _buyOrders[i].paymentToken
@@ -371,10 +363,6 @@ contract SweepFacet is OwnershipModifers, ISmolSweeper, ABaseSweeperFacet {
           ) revert FirstBuyReverted(data);
         }
       } else revert InvalidMarketplaceId();
-
-      unchecked {
-        ++i;
-      }
     }
   }
 

@@ -18,7 +18,7 @@ import "../../../stratos/ExchangeV5.sol";
 
 import "../../structs/BuyOrder.sol";
 
-// import "@forge-std/src/Console2.sol";
+// import "@forge-std/src/console.sol";
 
 error InvalidNFTAddress();
 error FirstBuyReverted(bytes message);
@@ -240,6 +240,7 @@ library LibSweep {
     address marketplace = LibSweep.diamondStorage().marketplaces[
       LibSweep.TROVE_ID
     ];
+
     (bool spentSuccess, bytes memory data) = marketplace.call{
       value: (_paymentToken == ITroveMarketplace(marketplace).weth())
         ? (uint128(_buyOrder.price) * _quantityToBuy)
@@ -247,10 +248,6 @@ library LibSweep {
     }(
       abi.encodeWithSelector(ITroveMarketplace.buyItems.selector, buyItemParams)
     );
-
-    // (bool spentSuccess, bytes memory data) = LibSweep.tryBuyItemTrove(
-    //   buyItemParams
-    // );
 
     if (spentSuccess) {
       if (
