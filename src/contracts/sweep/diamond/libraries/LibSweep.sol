@@ -237,16 +237,8 @@ library LibSweep {
       _usingETH
     );
 
-    address marketplace = LibSweep.diamondStorage().marketplaces[
-      LibSweep.TROVE_ID
-    ];
-
-    (bool spentSuccess, bytes memory data) = marketplace.call{
-      value: (_paymentToken == ITroveMarketplace(marketplace).weth())
-        ? (uint128(_buyOrder.price) * _quantityToBuy)
-        : 0
-    }(
-      abi.encodeWithSelector(ITroveMarketplace.buyItems.selector, buyItemParams)
+    (bool spentSuccess, bytes memory data) = LibSweep.tryBuyItemTrove(
+      buyItemParams
     );
 
     if (spentSuccess) {
