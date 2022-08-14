@@ -2,26 +2,24 @@
 pragma solidity ^0.8.14;
 
 import "@forge-std/src/Script.sol";
-import "@contracts/sweep/SmolSweeper.sol";
+import {SmolSweeper} from "@contracts/sweep/SmolSweeper.sol";
 
-import "@contracts/treasure/trove/TroveMarketplace.sol";
-import "@contracts/treasure/assets/magic-token/Magic.sol";
-import "@contracts/weth/WETH9.sol";
-import "@contracts/assets/erc721/NFTERC721.sol";
-import "@contracts/assets/erc1155/NFTERC1155.sol";
-import "@contracts/token/ANFTReceiver.sol";
+// import "@contracts/treasure/trove/TroveMarketplace.sol";
+// import "@contracts/treasure/assets/magic-token/Magic.sol";
+// import "@contracts/weth/WETH9.sol";
+// import "@contracts/assets/erc721/NFTERC721.sol";
+// import "@contracts/assets/erc1155/NFTERC1155.sol";
+// import "@contracts/token/ANFTReceiver.sol";
 
-import "@contracts/sweep/interfaces/ITroveSmolSweeper.sol";
-
-import "@contracts/sweep/diamond/interfaces/IDiamondCut.sol";
-import "@contracts/sweep/diamond/facets/DiamondCutFacet.sol";
-import "@contracts/sweep/diamond/facets/OwnershipFacet.sol";
-// import "@contracts/sweep/diamond/facets/sweep/SweepTroveFacet.sol";
-import "@contracts/sweep/diamond/facets/sweep/BaseSweepFacet.sol";
-import "@contracts/sweep/diamond/facets/sweep/SweepFacet.sol";
-import "@contracts/sweep/diamond/facets/sweep/SweepSwapFacet.sol";
+import {IDiamondCut} from "@contracts/sweep/diamond/interfaces/IDiamondCut.sol";
+import {IDiamondInit} from "@contracts/sweep/diamond/interfaces/IDiamondInit.sol";
+import {DiamondCutFacet} from "@contracts/sweep/diamond/facets/DiamondCutFacet.sol";
 import {DiamondLoupeFacet} from "@contracts/sweep/diamond/facets/DiamondLoupeFacet.sol";
-import "@contracts/sweep/diamond/Diamond.sol";
+import {Diamond} from "@contracts/sweep/diamond/Diamond.sol";
+import {OwnershipFacet} from "@contracts/sweep/diamond/facets/OwnershipFacet.sol";
+import {BaseSweepFacet} from "@contracts/sweep/diamond/facets/sweep/BaseSweepFacet.sol";
+import {SweepFacet} from "@contracts/sweep/diamond/facets/sweep/SweepFacet.sol";
+import {SweepSwapFacet} from "@contracts/sweep/diamond/facets/sweep/SweepSwapFacet.sol";
 
 contract MyScript is Script, IDiamondCut {
   SmolSweeper public smolsweep;
