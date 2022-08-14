@@ -35,11 +35,11 @@ contract MyScript is Script, IDiamondCut {
   function run() external {
     vm.startBroadcast();
     //deploy facets
+    dCutFacet = new DiamondCutFacet();
     smolsweep = new SmolSweeper(
       0x5Fc8A00e4141165BCb67419a7498959E4351cc94,
       address(dCutFacet)
     );
-    dCutFacet = new DiamondCutFacet();
     dLoupe = new DiamondLoupeFacet();
     ownerF = new OwnershipFacet();
     baseF = new BaseSweepFacet();
