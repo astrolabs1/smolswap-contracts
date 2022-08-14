@@ -18,6 +18,8 @@ import "../../../stratos/ExchangeV5.sol";
 
 import "../../structs/BuyOrder.sol";
 
+import "@contracts/sweep/structs/Swap.sol";
+
 // import "@forge-std/src/console.sol";
 
 error InvalidNFTAddress();
@@ -188,14 +190,30 @@ library LibSweep {
   function _maxSpendWithoutFees(uint256[] memory _maxSpendIncFees)
     internal
     view
-    returns (uint256[] memory maxSpendIncFeesAmount)
+    returns (uint256[] memory maxSpends)
   {
-    maxSpendIncFeesAmount = new uint256[](_maxSpendIncFees.length);
-
     uint256 maxSpendLength = _maxSpendIncFees.length;
+    maxSpends = new uint256[](maxSpendLength);
+
     for (uint256 i = 0; i < maxSpendLength; ) {
-      maxSpendIncFeesAmount[i] = LibSweep._calculateAmountWithoutFees(
-        _maxSpendIncFees[i]
+      maxSpends[i] = LibSweep._calculateAmountWithoutFees(_maxSpendIncFees[i]);
+      unchecked {
+        ++i;
+      }
+    }
+  }
+
+  function _maxSpendWithoutFees(Swap[] memory _swaps)
+    internal
+    view
+    returns (uint256[] memory maxSpends)
+  {
+    uint256 maxSpendLength = _swaps.length;
+    maxSpends = new uint256[](maxSpendLength);
+
+    for (uint256 i = 0; i < maxSpendLength; ) {
+      maxSpends[i] = LibSweep._calculateAmountWithoutFees(
+        _swaps[i].maxSpendIncFees
       );
       unchecked {
         ++i;
@@ -210,6 +228,23 @@ library LibSweep {
     uint256 paymentTokensLength = _paymentTokens.length;
     for (; j < paymentTokensLength; ) {
       if (_paymentTokens[j] == _buyOrderPaymentToken) {
+        return j;
+      }
+      unchecked {
+        ++j;
+      }
+    }
+    revert PaymentTokenNotGiven(_buyOrderPaymentToken);
+  }
+
+  function _getTokenIndex(Swap[] memory _swaps, address _buyOrderPaymentToken)
+    internal
+    pure
+    returns (uint256 j)
+  {
+    uint256 paymentTokensLength = _swaps.length;
+    for (; j < paymentTokensLength; ) {
+      if (_swaps[j].paymentToken == _buyOrderPaymentToken) {
         return j;
       }
       unchecked {

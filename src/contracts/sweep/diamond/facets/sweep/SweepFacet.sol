@@ -16,13 +16,11 @@ import "../../../../treasure/interfaces/ITroveMarketplace.sol";
 import "../../../interfaces/ISmolSweeper.sol";
 import "../../../errors/BuyError.sol";
 
-import "./ABaseSweeperFacet.sol";
-
 import "../../../structs/BuyOrder.sol";
 
 // import "@forge-std/src/console.sol";
 
-contract SweepFacet is OwnershipModifers, ISmolSweeper, ABaseSweeperFacet {
+contract SweepFacet is OwnershipModifers, ISmolSweeper {
   using SafeERC20 for IERC20;
 
   function buyItemsSingleToken(
@@ -202,7 +200,7 @@ contract SweepFacet is OwnershipModifers, ISmolSweeper, ABaseSweeperFacet {
     uint256 length = _paymentTokens.length;
 
     for (uint256 i = 0; i < length; ++i) {
-      if (_buyOrders[i].usingETH) {
+      if (_paymentTokens[i] == address(0)) {
         if (_maxSpendIncFees[i] != msg.value) revert InvalidMsgValue();
       } else {
         // if (msg.value != 0) revert MsgValueShouldBeZero();
@@ -232,12 +230,14 @@ contract SweepFacet is OwnershipModifers, ISmolSweeper, ABaseSweeperFacet {
       uint256 refundAmount = _maxSpendIncFees[i] -
         (totalSpentAmount[i] + LibSweep._calculateFee(totalSpentAmount[i]));
 
-      if (_buyOrders[i].usingETH) {
-        payable(msg.sender).transfer(refundAmount);
-        emit LibSweep.RefundedToken(address(0), refundAmount);
-      } else {
-        IERC20(_paymentTokens[i]).safeTransfer(msg.sender, refundAmount);
-        emit LibSweep.RefundedToken(_paymentTokens[i], refundAmount);
+      if (refundAmount > 0) {
+        if (_paymentTokens[i] == address(0)) {
+          payable(msg.sender).transfer(refundAmount);
+          emit LibSweep.RefundedToken(address(0), refundAmount);
+        } else {
+          IERC20(_paymentTokens[i]).safeTransfer(msg.sender, refundAmount);
+          emit LibSweep.RefundedToken(_paymentTokens[i], refundAmount);
+        }
       }
     }
   }
@@ -256,7 +256,7 @@ contract SweepFacet is OwnershipModifers, ISmolSweeper, ABaseSweeperFacet {
     for (uint256 i = 0; i < _buyOrders.length; ++i) {
       uint256 j = LibSweep._getTokenIndex(
         _paymentTokens,
-        _buyOrders[i].paymentToken
+        (_buyOrders[i].usingETH) ? address(0) : _buyOrders[i].paymentToken
       );
 
       if (_buyOrders[i].marketplaceId == LibSweep.TROVE_ID) {
@@ -714,7 +714,7 @@ contract SweepFacet is OwnershipModifers, ISmolSweeper, ABaseSweeperFacet {
   //   for (uint256 i = 0; i < _buyOrders.length; ) {
   //     uint256 j = _getTokenIndex(
   //       _sweepParams.paymentTokens,
-  //       _buyOrders[i].paymentToken
+  //              (_buyOrders[i].usingETH) ? address(0) : _buyOrders[i].paymentToken
   //     );
 
   //     bool spentSuccess;

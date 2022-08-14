@@ -19,6 +19,7 @@ import "@contracts/sweep/diamond/interfaces/IDiamondCut.sol";
 import "@contracts/sweep/diamond/facets/DiamondCutFacet.sol";
 import "@contracts/sweep/diamond/facets/OwnershipFacet.sol";
 import "@contracts/sweep/diamond/facets/sweep/SweepFacet.sol";
+import "@contracts/sweep/diamond/facets/sweep/BaseSweepFacet.sol";
 import {DiamondLoupeFacet} from "@contracts/sweep/diamond/facets/DiamondLoupeFacet.sol";
 import "@contracts/sweep/diamond/Diamond.sol";
 import "@contracts/sweep/SmolSweepDiamondInit.sol";
@@ -29,6 +30,7 @@ contract SmolSweeperTest is Test, AERC721Receiver, IDiamondCut {
   DiamondCutFacet dCutFacet;
   DiamondLoupeFacet dLoupe;
   OwnershipFacet ownerF;
+  BaseSweepFacet baseF;
   SweepFacet sweepF;
   IDiamondInit init;
 
@@ -82,12 +84,13 @@ contract SmolSweeperTest is Test, AERC721Receiver, IDiamondCut {
     dLoupe = new DiamondLoupeFacet();
     ownerF = new OwnershipFacet();
     sweepF = new SweepFacet();
+    baseF = new BaseSweepFacet();
 
     init = new SmolSweepDiamondInit();
     // init = new DiamondInit();
 
     //build cut struct
-    FacetCut[] memory cut = new FacetCut[](4);
+    FacetCut[] memory cut = new FacetCut[](5);
 
     cut[0] = (
       FacetCut({
@@ -115,6 +118,14 @@ contract SmolSweeperTest is Test, AERC721Receiver, IDiamondCut {
 
     cut[3] = (
       FacetCut({
+        facetAddress: address(baseF),
+        action: FacetCutAction.Add,
+        functionSelectors: generateSelectors("BaseSweepFacet")
+      })
+    );
+
+    cut[4] = (
+      FacetCut({
         facetAddress: address(smolsweep),
         action: FacetCutAction.Add,
         functionSelectors: generateSelectors("SmolSweeper")
@@ -128,12 +139,12 @@ contract SmolSweeperTest is Test, AERC721Receiver, IDiamondCut {
       abi.encodePacked(IDiamondInit.init.selector)
     );
 
-    SweepFacet(address(smolsweep)).addMarketplace(
+    BaseSweepFacet(address(smolsweep)).addMarketplace(
       address(trove),
       address(magic)
     );
 
-    SweepFacet(address(smolsweep)).addMarketplace(
+    BaseSweepFacet(address(smolsweep)).addMarketplace(
       address(0xE5c7b4865D7f2B08FaAdF3F6d392E6D6Fa7B903C),
       address(0)
     );
@@ -382,7 +393,7 @@ contract SmolSweeperTest is Test, AERC721Receiver, IDiamondCut {
     assertEq(erc721ETH.balanceOf(SELLERS[0]), 0);
   }
 
-  function test_buyItemsManyTokenTroveUsingMagicAndETHSingleERC721() public {
+  function test_buyItemsMultiTokenTroveUsingMagicAndETHSingleERC721() public {
     magic.mint(BUYER, 1e18);
 
     erc721.safeMint(SELLERS[0]);
@@ -453,7 +464,7 @@ contract SmolSweeperTest is Test, AERC721Receiver, IDiamondCut {
 
       address[] memory tokens = new address[](2);
       tokens[0] = address(magic);
-      tokens[1] = address(weth);
+      tokens[1] = address(0);
       uint256[] memory maxSpends = new uint256[](2);
       maxSpends[0] = 1e18;
       maxSpends[1] = 1e18;
@@ -826,6 +837,4 @@ contract SmolSweeperTest is Test, AERC721Receiver, IDiamondCut {
   //   assertEq(erc721ETH.balanceOf(SELLERS[1]), 0);
   //   assertEq(erc721ETH.ownerOf(tokenId), BUYER);
   // }
-
-  receive() external payable {}
 }
