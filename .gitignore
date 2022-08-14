@@ -36,3 +36,6 @@ src/**/*.ts
 .env.*
 
 scripts/**/*
+
+broadcast/**/*
+
