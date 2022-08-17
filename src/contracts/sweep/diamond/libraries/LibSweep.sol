@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../../../treasure/interfaces/ITroveMarketplace.sol";
 
 import {LibDiamond} from "./LibDiamond.sol";
+import {LibMarketplaces} from "./LibMarketplaces.sol";
 
 import "../../errors/BuyError.sol";
 import "../../../token/ANFTReceiver.sol";
@@ -31,6 +32,7 @@ error MsgValueShouldBeZero();
 error PaymentTokenNotGiven(address _paymentToken);
 
 error InvalidMarketplaceId();
+error InvalidMarketplace();
 
 library LibSweep {
   using SafeERC20 for IERC20;
@@ -60,45 +62,14 @@ library LibSweep {
 
   struct SweepStorage {
     // owner of the contract
-    // IERC20 weth;
     uint256 sweepFee;
     IERC721 sweepNFT;
-    // IERC20 defaultPaymentToken;
-
-    address[] marketplaces;
-    address[] paymentTokens;
-    // ITroveMarketplace troveMarketplace;
-    // ExchangeV5 stratosMarketplace;
   }
 
   uint256 constant FEE_BASIS_POINTS = 1_000_000;
 
   bytes4 internal constant INTERFACE_ID_ERC721 = 0x80ac58cd;
   bytes4 internal constant INTERFACE_ID_ERC1155 = 0xd9b67a26;
-
-  uint16 internal constant TROVE_ID = 0;
-  uint16 internal constant STRATOS_ID = 1;
-
-  function _addMarketplace(address _marketplace, address _paymentToken)
-    internal
-  {
-    require(_marketplace != address(0));
-    diamondStorage().marketplaces.push(_marketplace);
-    diamondStorage().paymentTokens.push(_paymentToken);
-
-    if (_paymentToken != address(0)) {
-      IERC20(_paymentToken).approve(_marketplace, type(uint256).max);
-    }
-  }
-
-  function _setMarketplace(
-    uint256 _marketplaceId,
-    address _marketplace,
-    address _paymentToken
-  ) internal {
-    diamondStorage().marketplaces[_marketplaceId] = _marketplace;
-    diamondStorage().paymentTokens[_marketplaceId] = _paymentToken;
-  }
 
   function diamondStorage() internal pure returns (SweepStorage storage ds) {
     bytes32 position = DIAMOND_STORAGE_POSITION;
@@ -122,53 +93,48 @@ library LibSweep {
       (FEE_BASIS_POINTS + ds.sweepFee));
   }
 
-  function tryBuyItemTrove(BuyItemParams[] memory _buyOrders)
-    internal
-    returns (bool success, bytes memory data)
-  {
-    address marketplace = LibSweep.diamondStorage().marketplaces[TROVE_ID];
-    (success, data) = marketplace.call{
-      value: (_buyOrders[0].paymentToken ==
-        ITroveMarketplace(marketplace).weth())
+  function tryBuyItemTrove(
+    address _troveMarketplace,
+    BuyItemParams[] memory _buyOrders
+  ) internal returns (bool success, bytes memory data) {
+    (success, data) = _troveMarketplace.call{
+      value: (_buyOrders[0].usingEth)
         ? (_buyOrders[0].maxPricePerItem * _buyOrders[0].quantity)
         : 0
     }(abi.encodeWithSelector(ITroveMarketplace.buyItems.selector, _buyOrders));
   }
 
-  function tryBuyItemStratos(
-    BuyOrder memory _buyOrder,
-    address paymentERC20,
-    address buyer
-  ) internal returns (bool success, bytes memory data) {
-    bytes memory encoded = abi.encodeWithSelector(
-      ExchangeV5.fillSellOrder.selector,
-      _buyOrder.seller,
-      _buyOrder.assetAddress,
-      _buyOrder.tokenId,
-      _buyOrder.startTime,
-      _buyOrder.expiration,
-      _buyOrder.price,
-      _buyOrder.quantity,
-      _buyOrder.createdAtBlockNumber,
-      paymentERC20,
-      _buyOrder.signature,
-      buyer
-    );
-    (success, data) = LibSweep.diamondStorage().marketplaces[STRATOS_ID].call{
-      value: (paymentERC20 == address(0))
-        ? (_buyOrder.price * _buyOrder.quantity)
-        : 0
-    }(encoded);
-  }
+  // function tryBuyItemStratos(
+  //   BuyOrder memory _buyOrder,
+  //   address _paymentERC20,
+  //   address _buyer,
+  //   bool _usingETH
+  // ) internal returns (bool success, bytes memory data) {
+  //   bytes memory encoded = abi.encodeWithSelector(
+  //     ExchangeV5.fillSellOrder.selector,
+  //     _buyOrder.seller,
+  //     _buyOrder.assetAddress,
+  //     _buyOrder.tokenId,
+  //     _buyOrder.startTime,
+  //     _buyOrder.expiration,
+  //     _buyOrder.price,
+  //     _buyOrder.quantity,
+  //     _buyOrder.createdAtBlockNumber,
+  //     _paymentERC20,
+  //     _buyOrder.signature,
+  //     _buyer
+  //   );
+  //   (success, data) = (_buyOrder.marketplaceAddress).call{
+  //     value: (_usingETH) ? (_buyOrder.price * _buyOrder.quantity) : 0
+  //   }(encoded);
+  // }
 
   function tryBuyItemStratosMulti(
     MultiTokenBuyOrder memory _buyOrder,
-    address payable buyer
+    address payable _buyer
   ) internal returns (bool success, bytes memory data) {
-    (success, data) = LibSweep.diamondStorage().marketplaces[STRATOS_ID].call{
-      value: (_buyOrder.paymentToken == address(0))
-        ? (_buyOrder.price * _buyOrder.quantity)
-        : 0
+    (success, data) = _buyOrder.marketplaceAddress.call{
+      value: (_buyOrder.usingETH) ? (_buyOrder.price * _buyOrder.quantity) : 0
     }(
       abi.encodeWithSelector(
         ExchangeV5.fillSellOrder.selector,
@@ -182,7 +148,7 @@ library LibSweep {
         _buyOrder.createdAtBlockNumber,
         _buyOrder.paymentToken,
         _buyOrder.signature,
-        buyer
+        _buyer
       )
     );
   }
@@ -197,24 +163,6 @@ library LibSweep {
 
     for (uint256 i = 0; i < maxSpendLength; ) {
       maxSpends[i] = LibSweep._calculateAmountWithoutFees(_maxSpendIncFees[i]);
-      unchecked {
-        ++i;
-      }
-    }
-  }
-
-  function _maxSpendWithoutFees(Swap[] memory _swaps)
-    internal
-    view
-    returns (uint256[] memory maxSpends)
-  {
-    uint256 maxSpendLength = _swaps.length;
-    maxSpends = new uint256[](maxSpendLength);
-
-    for (uint256 i = 0; i < maxSpendLength; ) {
-      maxSpends[i] = LibSweep._calculateAmountWithoutFees(
-        _swaps[i].maxSpendIncFees
-      );
       unchecked {
         ++i;
       }
@@ -237,23 +185,6 @@ library LibSweep {
     revert PaymentTokenNotGiven(_buyOrderPaymentToken);
   }
 
-  function _getTokenIndex(Swap[] memory _swaps, address _buyOrderPaymentToken)
-    internal
-    pure
-    returns (uint256 j)
-  {
-    uint256 paymentTokensLength = _swaps.length;
-    for (; j < paymentTokensLength; ) {
-      if (_swaps[j].paymentToken == _buyOrderPaymentToken) {
-        return j;
-      }
-      unchecked {
-        ++j;
-      }
-    }
-    revert PaymentTokenNotGiven(_buyOrderPaymentToken);
-  }
-
   function _troveOrder(
     BuyOrder memory _buyOrder,
     uint64 _quantityToBuy,
@@ -266,13 +197,14 @@ library LibSweep {
       _buyOrder.assetAddress,
       _buyOrder.tokenId,
       _buyOrder.seller,
-      uint64(_quantityToBuy),
+      _quantityToBuy,
       uint128(_buyOrder.price),
       _paymentToken,
       _usingETH
     );
 
     (bool spentSuccess, bytes memory data) = LibSweep.tryBuyItemTrove(
+      _buyOrder.marketplaceAddress,
       buyItemParams
     );
 
@@ -360,6 +292,7 @@ library LibSweep {
     );
 
     (bool spentSuccess, bytes memory data) = LibSweep.tryBuyItemTrove(
+      _buyOrder.marketplaceAddress,
       buyItemParams
     );
 
@@ -428,5 +361,260 @@ library LibSweep {
       ) revert FirstBuyReverted(data);
     }
     return (0, false);
+  }
+
+  // function _buyItemsSingleToken(
+  //   BuyOrder[] memory _buyOrders,
+  //   address _paymentToken,
+  //   bool _usingETH,
+  //   uint16 _inputSettingsBitFlag,
+  //   uint256 _maxSpend
+  // ) internal returns (uint256 totalSpentAmount, uint256 successCount) {
+  //   // buy all assets
+  //   for (uint256 i = 0; i < _buyOrders.length; ++i) {
+  //     if (_buyOrders[i].marketplaceTypeId == LibMarketplaces.TROVE_ID) {
+  //       // check if the listing exists
+  //       uint64 quantityToBuy;
+
+  //       ITroveMarketplace.ListingOrBid memory listing = ITroveMarketplace(
+  //         _buyOrders[i].marketplaceAddress
+  //       ).listings(
+  //           _buyOrders[i].assetAddress,
+  //           _buyOrders[i].tokenId,
+  //           _buyOrders[i].seller
+  //         );
+
+  //       // check if total price is less than max spend allowance left
+  //       if (
+  //         (listing.pricePerItem * _buyOrders[i].quantity) >
+  //         (_maxSpend - totalSpentAmount) &&
+  //         SettingsBitFlag.checkSetting(
+  //           _inputSettingsBitFlag,
+  //           SettingsBitFlag.EXCEEDING_MAX_SPEND
+  //         )
+  //       ) break;
+
+  //       // not enough listed items
+  //       if (listing.quantity < _buyOrders[i].quantity) {
+  //         if (
+  //           SettingsBitFlag.checkSetting(
+  //             _inputSettingsBitFlag,
+  //             SettingsBitFlag.INSUFFICIENT_QUANTITY_ERC1155
+  //           )
+  //         ) {
+  //           quantityToBuy = listing.quantity;
+  //         } else {
+  //           continue; // skip item
+  //         }
+  //       } else {
+  //         quantityToBuy = uint64(_buyOrders[i].quantity);
+  //       }
+
+  //       // buy item
+  //       (uint256 spentAmount, bool success) = LibSweep._troveOrder(
+  //         _buyOrders[i],
+  //         quantityToBuy,
+  //         _paymentToken,
+  //         _usingETH,
+  //         _inputSettingsBitFlag
+  //       );
+
+  //       if (success) {
+  //         totalSpentAmount += spentAmount;
+  //         successCount++;
+  //       }
+  //     } else if (
+  //       _buyOrders[i].marketplaceTypeId == LibMarketplaces.STRATOS_ID
+  //     ) {
+  //       // check if total price is less than max spend allowance left
+  //       if (
+  //         (_buyOrders[i].price * _buyOrders[i].quantity) >
+  //         _maxSpend - totalSpentAmount &&
+  //         SettingsBitFlag.checkSetting(
+  //           _inputSettingsBitFlag,
+  //           SettingsBitFlag.EXCEEDING_MAX_SPEND
+  //         )
+  //       ) break;
+
+  //       (bool spentSuccess, bytes memory data) = LibSweep
+  //         .tryBuyItemStratosMulti(MultiTokenBuyOrder(
+  //           _buyOrders[i].marketplaceAddress,
+  //           _buyOrders[i].assetAddress,
+  //         ), payable(msg.sender));
+  //       // (bool spentSuccess, bytes memory data) = LibSweep.tryBuyItemStratos(
+  //       //   _buyOrders[i],
+  //       //   _paymentToken,
+  //       //   payable(msg.sender),
+  //       //   _usingETH
+  //       // );
+
+  //       if (spentSuccess) {
+  //         if (
+  //           SettingsBitFlag.checkSetting(
+  //             _inputSettingsBitFlag,
+  //             SettingsBitFlag.EMIT_SUCCESS_EVENT_LOGS
+  //           )
+  //         ) {
+  //           emit LibSweep.SuccessBuyItem(
+  //             _buyOrders[0].assetAddress,
+  //             _buyOrders[0].tokenId,
+  //             payable(msg.sender),
+  //             _buyOrders[0].quantity,
+  //             _buyOrders[i].price
+  //           );
+  //         }
+  //         totalSpentAmount += _buyOrders[i].price * _buyOrders[i].quantity;
+  //         successCount++;
+  //       } else {
+  //         if (
+  //           SettingsBitFlag.checkSetting(
+  //             _inputSettingsBitFlag,
+  //             SettingsBitFlag.EMIT_FAILURE_EVENT_LOGS
+  //           )
+  //         ) {
+  //           emit LibSweep.CaughtFailureBuyItem(
+  //             _buyOrders[0].assetAddress,
+  //             _buyOrders[0].tokenId,
+  //             payable(msg.sender),
+  //             _buyOrders[0].quantity,
+  //             _buyOrders[i].price,
+  //             data
+  //           );
+  //         }
+  //         if (
+  //           SettingsBitFlag.checkSetting(
+  //             _inputSettingsBitFlag,
+  //             SettingsBitFlag.MARKETPLACE_BUY_ITEM_REVERTED
+  //           )
+  //         ) revert FirstBuyReverted(data);
+  //       }
+  //     } else revert InvalidMarketplaceId();
+  //   }
+  // }
+
+  function _buyItemsMultiTokens(
+    MultiTokenBuyOrder[] memory _buyOrders,
+    uint16 _inputSettingsBitFlag,
+    address[] memory _paymentTokens,
+    uint256[] memory _maxSpends
+  )
+    internal
+    returns (uint256[] memory totalSpentAmounts, uint256 successCount)
+  {
+    totalSpentAmounts = new uint256[](_paymentTokens.length);
+    // // buy all assets
+    for (uint256 i = 0; i < _buyOrders.length; ++i) {
+      uint256 j = LibSweep._getTokenIndex(
+        _paymentTokens,
+        (_buyOrders[i].usingETH) ? address(0) : _buyOrders[i].paymentToken
+      );
+
+      if (_buyOrders[i].marketplaceTypeId == LibMarketplaces.TROVE_ID) {
+        // check if the listing exists
+        uint64 quantityToBuy;
+
+        ITroveMarketplace.ListingOrBid memory listing = ITroveMarketplace(
+          _buyOrders[i].marketplaceAddress
+        ).listings(
+            _buyOrders[i].assetAddress,
+            _buyOrders[i].tokenId,
+            _buyOrders[i].seller
+          );
+
+        // check if total price is less than max spend allowance left
+        if (
+          (listing.pricePerItem * _buyOrders[i].quantity) >
+          (_maxSpends[j] - totalSpentAmounts[j]) &&
+          SettingsBitFlag.checkSetting(
+            _inputSettingsBitFlag,
+            SettingsBitFlag.EXCEEDING_MAX_SPEND
+          )
+        ) break;
+
+        // not enough listed items
+        if (listing.quantity < _buyOrders[i].quantity) {
+          if (
+            SettingsBitFlag.checkSetting(
+              _inputSettingsBitFlag,
+              SettingsBitFlag.INSUFFICIENT_QUANTITY_ERC1155
+            )
+          ) {
+            quantityToBuy = listing.quantity;
+          } else {
+            continue; // skip item
+          }
+        } else {
+          quantityToBuy = uint64(_buyOrders[i].quantity);
+        }
+
+        // buy item
+        (uint256 spentAmount, bool success) = LibSweep._troveOrderMultiToken(
+          _buyOrders[i],
+          quantityToBuy,
+          _inputSettingsBitFlag
+        );
+
+        if (success) {
+          totalSpentAmounts[j] += spentAmount;
+          successCount++;
+        }
+      } else if (
+        _buyOrders[i].marketplaceTypeId == LibMarketplaces.STRATOS_ID
+      ) {
+        // check if total price is less than max spend allowance left
+        if (
+          (_buyOrders[i].price * _buyOrders[i].quantity) >
+          _maxSpends[j] - totalSpentAmounts[j] &&
+          SettingsBitFlag.checkSetting(
+            _inputSettingsBitFlag,
+            SettingsBitFlag.EXCEEDING_MAX_SPEND
+          )
+        ) break;
+
+        (bool spentSuccess, bytes memory data) = LibSweep
+          .tryBuyItemStratosMulti(_buyOrders[i], payable(msg.sender));
+
+        if (spentSuccess) {
+          if (
+            SettingsBitFlag.checkSetting(
+              _inputSettingsBitFlag,
+              SettingsBitFlag.EMIT_SUCCESS_EVENT_LOGS
+            )
+          ) {
+            emit LibSweep.SuccessBuyItem(
+              _buyOrders[0].assetAddress,
+              _buyOrders[0].tokenId,
+              payable(msg.sender),
+              _buyOrders[0].quantity,
+              _buyOrders[i].price
+            );
+          }
+          totalSpentAmounts[j] += _buyOrders[i].price * _buyOrders[i].quantity;
+          successCount++;
+        } else {
+          if (
+            SettingsBitFlag.checkSetting(
+              _inputSettingsBitFlag,
+              SettingsBitFlag.EMIT_FAILURE_EVENT_LOGS
+            )
+          ) {
+            emit LibSweep.CaughtFailureBuyItem(
+              _buyOrders[0].assetAddress,
+              _buyOrders[0].tokenId,
+              payable(msg.sender),
+              _buyOrders[0].quantity,
+              _buyOrders[i].price,
+              data
+            );
+          }
+          if (
+            SettingsBitFlag.checkSetting(
+              _inputSettingsBitFlag,
+              SettingsBitFlag.MARKETPLACE_BUY_ITEM_REVERTED
+            )
+          ) revert FirstBuyReverted(data);
+        }
+      } else revert InvalidMarketplaceId();
+    }
   }
 }

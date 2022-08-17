@@ -28,13 +28,13 @@ import "../../treasure/interfaces/ITroveMarketplace.sol";
 import "../structs/BuyOrder.sol";
 
 interface ISmolSweeper {
-  function buyItemsSingleToken(
-    BuyOrder[] calldata _buyOrders,
-    bool _usingETH,
-    uint16 _inputSettingsBitFlag,
-    address _paymentToken,
-    uint256 _maxSpendIncFees
-  ) external payable;
+  // function buyItemsSingleToken(
+  //   BuyOrder[] calldata _buyOrders,
+  //   bool _usingETH,
+  //   uint16 _inputSettingsBitFlag,
+  //   address _paymentToken,
+  //   uint256 _maxSpendIncFees
+  // ) external payable;
 
   function buyItemsMultiTokens(
     MultiTokenBuyOrder[] calldata _buyOrders,

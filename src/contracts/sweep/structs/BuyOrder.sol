@@ -32,7 +32,8 @@ struct BuyOrder {
   uint256 createdAtBlockNumber;
   uint64 startTime;
   uint64 expiration;
-  uint16 marketplaceId;
+  address marketplaceAddress;
+  uint16 marketplaceTypeId;
   bytes signature;
 }
 
@@ -45,7 +46,8 @@ struct MultiTokenBuyOrder {
   uint256 createdAtBlockNumber;
   uint64 startTime;
   uint64 expiration;
-  uint16 marketplaceId;
+  address marketplaceAddress;
+  uint16 marketplaceTypeId;
   bytes signature;
   address paymentToken;
   bool usingETH;

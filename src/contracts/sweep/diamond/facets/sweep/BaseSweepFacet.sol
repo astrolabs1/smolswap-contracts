@@ -66,7 +66,6 @@ contract BaseSweepFacet is OwnershipModifers {
   }
 
   // rescue functions
-  // those have not been tested yet
   function transferETHTo(address payable _to, uint256 _amount)
     external
     onlyOwner
@@ -104,44 +103,5 @@ contract BaseSweepFacet is OwnershipModifers {
       _amounts,
       _data
     );
-  }
-
-  function TROVE_ID() external pure returns (uint256) {
-    return LibSweep.TROVE_ID;
-  }
-
-  function STRATOS_ID() external pure returns (uint256) {
-    return LibSweep.STRATOS_ID;
-  }
-
-  function addMarketplace(address _marketplace, address _paymentToken)
-    external
-    onlyOwner
-  {
-    LibSweep._addMarketplace(_marketplace, _paymentToken);
-  }
-
-  function setMarketplace(
-    uint256 _marketplaceId,
-    address _marketplace,
-    address _paymentToken
-  ) external onlyOwner {
-    LibSweep._setMarketplace(_marketplaceId, _marketplace, _paymentToken);
-  }
-
-  function getMarketplace(uint16 _marketplaceId)
-    external
-    view
-    returns (address)
-  {
-    return LibSweep.diamondStorage().marketplaces[_marketplaceId];
-  }
-
-  function getMarketplacePaymentToken(uint16 _marketplaceId)
-    external
-    view
-    returns (address)
-  {
-    return LibSweep.diamondStorage().paymentTokens[_marketplaceId];
   }
 }

@@ -32,71 +32,86 @@ contract SweepSwapFacet is OwnershipModifers {
   function swapBuyMultiTokens(
     MultiTokenBuyOrder[] calldata _buyOrders,
     uint16 _inputSettingsBitFlag,
+    address[] calldata _paymentTokens,
     Swap[] calldata _swaps
   ) external payable {
     uint256 length = _swaps.length;
-    for (uint256 i = 0; i < _swaps.length; i++) {
+    uint256[] memory amounts = new uint256[](_paymentTokens.length);
+    for (uint256 i = 0; i < length; i++) {
+      uint256 tokenInd = LibSweep._getTokenIndex(
+        _paymentTokens,
+        (_buyOrders[i].usingETH) ? address(0) : _buyOrders[i].paymentToken
+      );
       if (_swaps[i].swapType == SwapType.SWAP_ETH_TO_EXACT_TOKEN) {
         _swaps[i].router.swapETHForExactTokens{value: msg.value}(
-          _swaps[i].maxSpendIncFees,
+          _swaps[i].amountOut,
           _swaps[i].path,
           address(this),
           _swaps[i].deadline
         );
+        amounts[tokenInd] = _swaps[i].amountOut;
       } else if (_swaps[i].swapType == SwapType.SWAP_TOKEN_TO_EXACT_TOKEN) {
         if (msg.value != 0) revert MsgValueShouldBeZero();
         IERC20(_swaps[i].path[0]).transferFrom(
           msg.sender,
           address(this),
-          _swaps[i].maxInputTokenAmount
+          _swaps[i].amountIn
         );
         IERC20(_swaps[i].path[0]).approve(
           address(_swaps[i].router),
-          _swaps[i].maxInputTokenAmount
+          _swaps[i].amountIn
         );
         _swaps[i].router.swapTokensForExactTokens(
-          _swaps[i].maxSpendIncFees,
-          _swaps[i].maxInputTokenAmount,
+          _swaps[i].amountOut,
+          _swaps[i].amountIn,
           _swaps[i].path,
           address(this),
           _swaps[i].deadline
         );
+        amounts[tokenInd] = _swaps[i].amountOut;
       } else if (_swaps[i].swapType == SwapType.SWAP_TOKEN_TO_EXACT_ETH) {
         if (msg.value != 0) revert MsgValueShouldBeZero();
         IERC20(_swaps[i].path[0]).transferFrom(
           msg.sender,
           address(this),
-          _swaps[i].maxInputTokenAmount
+          _swaps[i].amountIn
         );
         IERC20(_swaps[i].path[0]).approve(
           address(_swaps[i].router),
-          _swaps[i].maxInputTokenAmount
+          _swaps[i].amountIn
         );
         _swaps[i].router.swapTokensForExactETH(
-          _swaps[i].maxSpendIncFees,
-          _swaps[i].maxInputTokenAmount,
+          _swaps[i].amountOut,
+          _swaps[i].amountIn,
           _swaps[i].path,
           address(this),
           _swaps[i].deadline
         );
-      }
+        amounts[tokenInd] = _swaps[i].amountOut;
+      } else if (_swaps[i].swapType == SwapType.NO_SWAP) {
+        if (msg.value != 0) revert MsgValueShouldBeZero();
+        IERC20(_swaps[i].path[0]).transferFrom(
+          msg.sender,
+          address(this),
+          _swaps[i].amountIn
+        );
+        amounts[tokenInd] = _swaps[i].amountIn;
+      } else revert WrongSwapType();
     }
 
-    (
-      uint256[] memory totalSpentAmount,
-      uint256 successCount
-    ) = _swapBuyItemsMultiTokens(
+    (uint256[] memory totalSpentAmount, uint256 successCount) = LibSweep
+      ._buyItemsMultiTokens(
         _buyOrders,
         _inputSettingsBitFlag,
-        _swaps,
-        LibSweep._maxSpendWithoutFees(_swaps)
+        _paymentTokens,
+        LibSweep._maxSpendWithoutFees(amounts)
       );
 
     // transfer back failed payment tokens to the buyer
     if (successCount == 0) revert AllReverted();
 
-    for (uint256 i = 0; i < length; ++i) {
-      uint256 refundAmount = _swaps[i].maxSpendIncFees -
+    for (uint256 i = 0; i < _paymentTokens.length; ++i) {
+      uint256 refundAmount = amounts[i] -
         (totalSpentAmount[i] + LibSweep._calculateFee(totalSpentAmount[i]));
 
       if (refundAmount > 0) {
@@ -117,130 +132,6 @@ contract SweepSwapFacet is OwnershipModifers {
           }
         }
       }
-    }
-  }
-
-  function _swapBuyItemsMultiTokens(
-    MultiTokenBuyOrder[] memory _buyOrders,
-    uint16 _inputSettingsBitFlag,
-    Swap[] memory _swaps,
-    uint256[] memory _maxSpends
-  )
-    internal
-    returns (uint256[] memory totalSpentAmounts, uint256 successCount)
-  {
-    totalSpentAmounts = new uint256[](_swaps.length);
-    // // buy all assets
-    for (uint256 i = 0; i < _buyOrders.length; ++i) {
-      uint256 j = LibSweep._getTokenIndex(
-        _swaps,
-        (_buyOrders[i].usingETH) ? address(0) : _buyOrders[i].paymentToken
-      );
-
-      if (_buyOrders[i].marketplaceId == LibSweep.TROVE_ID) {
-        // check if the listing exists
-        uint64 quantityToBuy;
-
-        ITroveMarketplace.ListingOrBid memory listing = ITroveMarketplace(
-          LibSweep.diamondStorage().marketplaces[LibSweep.TROVE_ID]
-        ).listings(
-            _buyOrders[i].assetAddress,
-            _buyOrders[i].tokenId,
-            _buyOrders[i].seller
-          );
-
-        // check if total price is less than max spend allowance left
-        if (
-          (listing.pricePerItem * _buyOrders[i].quantity) >
-          (_maxSpends[j] - totalSpentAmounts[j]) &&
-          SettingsBitFlag.checkSetting(
-            _inputSettingsBitFlag,
-            SettingsBitFlag.EXCEEDING_MAX_SPEND
-          )
-        ) break;
-
-        // not enough listed items
-        if (listing.quantity < _buyOrders[i].quantity) {
-          if (
-            SettingsBitFlag.checkSetting(
-              _inputSettingsBitFlag,
-              SettingsBitFlag.INSUFFICIENT_QUANTITY_ERC1155
-            )
-          ) {
-            quantityToBuy = listing.quantity;
-          } else {
-            continue; // skip item
-          }
-        } else {
-          quantityToBuy = uint64(_buyOrders[i].quantity);
-        }
-
-        // buy item
-        (uint256 spentAmount, bool success) = LibSweep._troveOrderMultiToken(
-          _buyOrders[i],
-          quantityToBuy,
-          _inputSettingsBitFlag
-        );
-
-        if (success) {
-          totalSpentAmounts[j] += spentAmount;
-          successCount++;
-        }
-      } else if (_buyOrders[i].marketplaceId == LibSweep.STRATOS_ID) {
-        // check if total price is less than max spend allowance left
-        if (
-          (_buyOrders[i].price * _buyOrders[i].quantity) >
-          _maxSpends[j] - totalSpentAmounts[j] &&
-          SettingsBitFlag.checkSetting(
-            _inputSettingsBitFlag,
-            SettingsBitFlag.EXCEEDING_MAX_SPEND
-          )
-        ) break;
-
-        (bool spentSuccess, bytes memory data) = LibSweep
-          .tryBuyItemStratosMulti(_buyOrders[i], payable(msg.sender));
-
-        if (spentSuccess) {
-          if (
-            SettingsBitFlag.checkSetting(
-              _inputSettingsBitFlag,
-              SettingsBitFlag.EMIT_SUCCESS_EVENT_LOGS
-            )
-          ) {
-            emit LibSweep.SuccessBuyItem(
-              _buyOrders[0].assetAddress,
-              _buyOrders[0].tokenId,
-              payable(msg.sender),
-              _buyOrders[0].quantity,
-              _buyOrders[i].price
-            );
-          }
-          totalSpentAmounts[j] += _buyOrders[i].price * _buyOrders[i].quantity;
-          successCount++;
-        } else {
-          if (
-            SettingsBitFlag.checkSetting(
-              _inputSettingsBitFlag,
-              SettingsBitFlag.EMIT_FAILURE_EVENT_LOGS
-            )
-          ) {
-            emit LibSweep.CaughtFailureBuyItem(
-              _buyOrders[0].assetAddress,
-              _buyOrders[0].tokenId,
-              payable(msg.sender),
-              _buyOrders[0].quantity,
-              _buyOrders[i].price,
-              data
-            );
-          }
-          if (
-            SettingsBitFlag.checkSetting(
-              _inputSettingsBitFlag,
-              SettingsBitFlag.MARKETPLACE_BUY_ITEM_REVERTED
-            )
-          ) revert FirstBuyReverted(data);
-        }
-      } else revert InvalidMarketplaceId();
     }
   }
 }

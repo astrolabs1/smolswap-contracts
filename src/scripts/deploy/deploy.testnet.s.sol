@@ -18,8 +18,11 @@ import {DiamondLoupeFacet} from "@contracts/sweep/diamond/facets/DiamondLoupeFac
 import {Diamond} from "@contracts/sweep/diamond/Diamond.sol";
 import {OwnershipFacet} from "@contracts/sweep/diamond/facets/OwnershipFacet.sol";
 import {BaseSweepFacet} from "@contracts/sweep/diamond/facets/sweep/BaseSweepFacet.sol";
+import {MarketplacesFacet} from "@contracts/sweep/diamond/facets/sweep/MarketplacesFacet.sol";
 import {SweepFacet} from "@contracts/sweep/diamond/facets/sweep/SweepFacet.sol";
 import {SweepSwapFacet} from "@contracts/sweep/diamond/facets/sweep/SweepSwapFacet.sol";
+import {LibMarketplaces} from "@contracts/sweep/diamond/libraries/LibMarketplaces.sol";
+import {LibSweep} from "@contracts/sweep/diamond/libraries/LibSweep.sol";
 
 contract MyScript is Script, IDiamondCut {
   SmolSweeper smolsweep;
@@ -27,6 +30,7 @@ contract MyScript is Script, IDiamondCut {
   DiamondLoupeFacet dLoupe;
   OwnershipFacet ownerF;
   BaseSweepFacet baseF;
+  MarketplacesFacet marketF;
   SweepFacet sweepF;
   SweepSwapFacet sweepSwapF;
 
@@ -43,11 +47,12 @@ contract MyScript is Script, IDiamondCut {
     dLoupe = new DiamondLoupeFacet();
     ownerF = new OwnershipFacet();
     baseF = new BaseSweepFacet();
+    marketF = new MarketplacesFacet();
     sweepF = new SweepFacet();
     sweepSwapF = new SweepSwapFacet();
 
     //build cut struct
-    FacetCut[] memory cut = new FacetCut[](6);
+    FacetCut[] memory cut = new FacetCut[](7);
 
     cut[0] = (
       FacetCut({
@@ -67,21 +72,29 @@ contract MyScript is Script, IDiamondCut {
 
     cut[2] = (
       FacetCut({
-        facetAddress: address(sweepF),
-        action: FacetCutAction.Add,
-        functionSelectors: generateSelectors("SweepFacet")
-      })
-    );
-
-    cut[3] = (
-      FacetCut({
         facetAddress: address(baseF),
         action: FacetCutAction.Add,
         functionSelectors: generateSelectors("BaseSweepFacet")
       })
     );
 
+    cut[3] = (
+      FacetCut({
+        facetAddress: address(marketF),
+        action: FacetCutAction.Add,
+        functionSelectors: generateSelectors("MarketplacesFacet")
+      })
+    );
+
     cut[4] = (
+      FacetCut({
+        facetAddress: address(sweepF),
+        action: FacetCutAction.Add,
+        functionSelectors: generateSelectors("SweepFacet")
+      })
+    );
+
+    cut[5] = (
       FacetCut({
         facetAddress: address(sweepSwapF),
         action: FacetCutAction.Add,
@@ -90,7 +103,7 @@ contract MyScript is Script, IDiamondCut {
     );
 
     // add it's immutable function selectors
-    cut[5] = (
+    cut[6] = (
       FacetCut({
         facetAddress: address(smolsweep),
         action: FacetCutAction.Add,
@@ -101,15 +114,21 @@ contract MyScript is Script, IDiamondCut {
     //upgrade diamond
     IDiamondCut(address(smolsweep)).diamondCut(cut, address(init), "");
 
-    BaseSweepFacet(address(smolsweep)).addMarketplace(
+    address[] memory troveTokens = new address[](1);
+    troveTokens[0] = address(0xd1D7B842D04C43FDe2B91453E91d678506A0620B);
+    MarketplacesFacet(address(smolsweep)).addMarketplace(
       address(0x09986B4e255B3c548041a30A2Ee312Fe176731c2),
-      address(0xd1D7B842D04C43FDe2B91453E91d678506A0620B)
+      LibMarketplaces.TROVE_ID,
+      troveTokens
     );
 
-    BaseSweepFacet(address(smolsweep)).addMarketplace(
+    address[] memory stratosTokens = new address[](1);
+    stratosTokens[0] = address(0);
+    MarketplacesFacet(address(smolsweep)).addMarketplace(
       address(0x998EF16Ea4111094EB5eE72fC2c6f4e6E8647666),
+      LibMarketplaces.STRATOS_ID,
       // address(0xE5c7b4865D7f2B08FaAdF3F6d392E6D6Fa7B903C),
-      address(0)
+      stratosTokens
     );
 
     vm.stopBroadcast();

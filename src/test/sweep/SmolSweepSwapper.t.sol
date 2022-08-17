@@ -1,11 +1,10 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.14;
 
 import "@forge-std/src/Test.sol";
-import "@contracts/sweep/SmolSweeper.sol";
+import {SmolSweeper} from "@contracts/sweep/SmolSweeper.sol";
 
 import "@contracts/sweep/structs/BuyOrder.sol";
-
 import "@contracts/treasure/trove/TroveMarketplace.sol";
 import "@contracts/treasure/assets/magic-token/Magic.sol";
 import "@contracts/weth/WETH9.sol";
@@ -15,85 +14,45 @@ import "@contracts/token/ANFTReceiver.sol";
 
 import "@contracts/sweep/interfaces/ISmolSweeper.sol";
 
-import "@contracts/sweep/diamond/interfaces/IDiamondCut.sol";
-import "@contracts/sweep/diamond/facets/DiamondCutFacet.sol";
-import "@contracts/sweep/diamond/facets/OwnershipFacet.sol";
-import "@contracts/sweep/diamond/facets/sweep/BaseSweepFacet.sol";
-import "@contracts/sweep/diamond/facets/sweep/SweepFacet.sol";
-import "@contracts/sweep/diamond/facets/sweep/SweepSwapFacet.sol";
+import {IDiamondCut} from "@contracts/sweep/diamond/interfaces/IDiamondCut.sol";
+import {IDiamondInit} from "@contracts/sweep/diamond/interfaces/IDiamondInit.sol";
+import {DiamondCutFacet} from "@contracts/sweep/diamond/facets/DiamondCutFacet.sol";
 import {DiamondLoupeFacet} from "@contracts/sweep/diamond/facets/DiamondLoupeFacet.sol";
-import "@contracts/sweep/diamond/Diamond.sol";
-import "@contracts/sweep/SmolSweepDiamondInit.sol";
-import {DiamondInit} from "@contracts/sweep/diamond/upgradeInitializers/DiamondInit.sol";
+import {Diamond} from "@contracts/sweep/diamond/Diamond.sol";
+import {OwnershipFacet} from "@contracts/sweep/diamond/facets/OwnershipFacet.sol";
+import {BaseSweepFacet} from "@contracts/sweep/diamond/facets/sweep/BaseSweepFacet.sol";
+import {MarketplacesFacet} from "@contracts/sweep/diamond/facets/sweep/MarketplacesFacet.sol";
+import {SweepFacet} from "@contracts/sweep/diamond/facets/sweep/SweepFacet.sol";
+import {SweepSwapFacet} from "@contracts/sweep/diamond/facets/sweep/SweepSwapFacet.sol";
 
-contract SmolSweeperTest is Test, AERC721Receiver, IDiamondCut {
-  SmolSweeper public smolsweep;
+contract MyScript is Test, IDiamondCut {
+  SmolSweeper smolsweep;
   DiamondCutFacet dCutFacet;
   DiamondLoupeFacet dLoupe;
   OwnershipFacet ownerF;
   BaseSweepFacet baseF;
+  MarketplacesFacet marketF;
   SweepFacet sweepF;
   SweepSwapFacet sweepSwapF;
+
   IDiamondInit init;
 
-  TroveMarketplace public trove;
-  Magic public magic;
-  WETH9 public weth;
-  NFTERC721 public erc721;
-  NFTERC721 public erc721ETH;
-
-  NFTERC1155 public erc1155;
-
-  address public OWNER;
-  address public constant NOT_OWNER =
-    0x0000000000000000000000000000000000000001;
-  address public constant NEW_OWNER =
-    0x0000000000000000000000000000000000000002;
-  address public constant BUYER = 0x0000000000000000000000000000000000000003;
-  address[] public SELLERS = [
-    0x0000000000000000000000000000000000000004,
-    0x0000000000000000000000000000000000000005,
-    0x0000000000000000000000000000000000000006
-  ];
-
-  function setUp() public {
-    OWNER = address(this);
-
-    magic = new Magic();
-    weth = new WETH9();
-    erc721 = new NFTERC721();
-    erc721ETH = new NFTERC721();
-    erc1155 = new NFTERC1155();
-
-    trove = new TroveMarketplace();
-    trove.initialize(0, OWNER, magic);
-    trove.setWeth(address(weth));
-    trove.setTokenApprovalStatus(
-      address(erc721),
-      TroveMarketplace.TokenApprovalStatus.ERC_721_APPROVED,
-      address(magic)
-    );
-
-    trove.setTokenApprovalStatus(
-      address(erc721ETH),
-      TroveMarketplace.TokenApprovalStatus.ERC_721_APPROVED,
-      address(weth)
-    );
-
+  function setUp() external {
     //deploy facets
     dCutFacet = new DiamondCutFacet();
-    smolsweep = new SmolSweeper(address(this), address(dCutFacet));
+    smolsweep = new SmolSweeper(
+      0x5Fc8A00e4141165BCb67419a7498959E4351cc94,
+      address(dCutFacet)
+    );
     dLoupe = new DiamondLoupeFacet();
     ownerF = new OwnershipFacet();
     baseF = new BaseSweepFacet();
+    marketF = new MarketplacesFacet();
     sweepF = new SweepFacet();
     sweepSwapF = new SweepSwapFacet();
 
-    init = new SmolSweepDiamondInit();
-    // init = new DiamondInit();
-
     //build cut struct
-    FacetCut[] memory cut = new FacetCut[](6);
+    FacetCut[] memory cut = new FacetCut[](7);
 
     cut[0] = (
       FacetCut({
@@ -113,21 +72,29 @@ contract SmolSweeperTest is Test, AERC721Receiver, IDiamondCut {
 
     cut[2] = (
       FacetCut({
-        facetAddress: address(sweepF),
-        action: FacetCutAction.Add,
-        functionSelectors: generateSelectors("SweepFacet")
-      })
-    );
-
-    cut[3] = (
-      FacetCut({
         facetAddress: address(baseF),
         action: FacetCutAction.Add,
         functionSelectors: generateSelectors("BaseSweepFacet")
       })
     );
 
+    cut[3] = (
+      FacetCut({
+        facetAddress: address(marketF),
+        action: FacetCutAction.Add,
+        functionSelectors: generateSelectors("MarketplacesFacet")
+      })
+    );
+
     cut[4] = (
+      FacetCut({
+        facetAddress: address(sweepF),
+        action: FacetCutAction.Add,
+        functionSelectors: generateSelectors("SweepFacet")
+      })
+    );
+
+    cut[5] = (
       FacetCut({
         facetAddress: address(sweepSwapF),
         action: FacetCutAction.Add,
@@ -135,7 +102,8 @@ contract SmolSweeperTest is Test, AERC721Receiver, IDiamondCut {
       })
     );
 
-    cut[5] = (
+    // add it's immutable function selectors
+    cut[6] = (
       FacetCut({
         facetAddress: address(smolsweep),
         action: FacetCutAction.Add,
@@ -144,20 +112,23 @@ contract SmolSweeperTest is Test, AERC721Receiver, IDiamondCut {
     );
 
     //upgrade diamond
-    IDiamondCut(address(smolsweep)).diamondCut(
-      cut,
-      address(init),
-      abi.encodePacked(IDiamondInit.init.selector)
+    IDiamondCut(address(smolsweep)).diamondCut(cut, address(init), "");
+
+    address[] memory troveTokens = new address[](1);
+    troveTokens[0] = address(0xd1D7B842D04C43FDe2B91453E91d678506A0620B);
+    MarketplacesFacet(address(smolsweep)).addMarketplace(
+      address(0x09986B4e255B3c548041a30A2Ee312Fe176731c2),
+      LibMarketplaces.TROVE_ID,
+      troveTokens
     );
 
-    BaseSweepFacet(address(smolsweep)).addMarketplace(
-      address(trove),
-      address(magic)
-    );
-
-    BaseSweepFacet(address(smolsweep)).addMarketplace(
-      address(0xE5c7b4865D7f2B08FaAdF3F6d392E6D6Fa7B903C),
-      address(0)
+    address[] memory stratosTokens = new address[](1);
+    stratosTokens[0] = address(0);
+    MarketplacesFacet(address(smolsweep)).addMarketplace(
+      address(0x998EF16Ea4111094EB5eE72fC2c6f4e6E8647666),
+      LibMarketplaces.STRATOS_ID,
+      // address(0xE5c7b4865D7f2B08FaAdF3F6d392E6D6Fa7B903C),
+      stratosTokens
     );
   }
 
@@ -180,48 +151,4 @@ contract SmolSweeperTest is Test, AERC721Receiver, IDiamondCut {
     address _init,
     bytes calldata _calldata
   ) external override {}
-
-  function test_owner() public {
-    assertEq(IERC173(address(smolsweep)).owner(), OWNER);
-  }
-
-  function test_transferOwnership() public {
-    IERC173(address(smolsweep)).transferOwnership(NEW_OWNER);
-    assertEq(IERC173(address(smolsweep)).owner(), NEW_OWNER);
-  }
-
-  function test_buySingleFromTrove() public {
-    magic.mint(BUYER, 1e18);
-
-    erc721.safeMint(SELLERS[0]);
-    uint256 tokenId = 0;
-
-    uint128 price = 1e9;
-
-    vm.startPrank(SELLERS[0], SELLERS[0]);
-    erc721.setApprovalForAll(address(trove), true);
-    trove.createListing(
-      address(erc721),
-      tokenId,
-      1,
-      price,
-      uint64(block.timestamp + 100),
-      address(magic)
-    );
-    vm.stopPrank();
-
-    vm.startPrank(BUYER, BUYER);
-    magic.approve(address(trove), price);
-    BuyItemParams[] memory buyParams = new BuyItemParams[](1);
-    buyParams[0] = BuyItemParams(
-      address(erc721),
-      tokenId,
-      SELLERS[0],
-      1,
-      price,
-      address(magic),
-      false
-    );
-    trove.buyItems(buyParams);
-  }
 }
