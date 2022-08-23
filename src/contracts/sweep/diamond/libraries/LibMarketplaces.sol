@@ -7,11 +7,20 @@ import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../../../treasure/interfaces/ITroveMarketplace.sol";
 
-import "@forge-std/src/console.sol";
+// import "@forge-std/src/console.sol";
+
+enum MarketplaceType {
+  TROVE,
+  SEAPORT_V1
+}
+
+struct MarketplaceTypeData {
+  bytes4 interfaceID;
+  string name;
+}
 
 struct MarketplaceData {
   address[] paymentTokens;
-  uint16 marketplaceTypeId;
 }
 
 error InvalidMarketplaceId();
@@ -24,9 +33,6 @@ library LibMarketplaces {
   struct MarketplacesStorage {
     mapping(address => MarketplaceData) marketplacesData;
   }
-
-  uint16 internal constant TROVE_ID = 0;
-  uint16 internal constant STRATOS_ID = 1;
 
   function diamondStorage()
     internal
@@ -41,32 +47,29 @@ library LibMarketplaces {
 
   function _addMarketplace(
     address _marketplace,
-    uint16 _marketplaceTypeId,
     address[] memory _paymentTokens
   ) internal {
     if (_marketplace == address(0)) revert InvalidMarketplace();
 
     diamondStorage().marketplacesData[_marketplace] = MarketplaceData(
-      _paymentTokens,
-      _marketplaceTypeId
+      _paymentTokens
     );
 
     for (uint256 i = 0; i < _paymentTokens.length; i++) {
-      console.log(i, _paymentTokens[i]);
       if (_paymentTokens[i] != address(0)) {
         IERC20(_paymentTokens[i]).approve(_marketplace, type(uint256).max);
       }
     }
   }
 
-  function _setMarketplaceTypeId(
-    address _marketplace,
-    uint16 _marketplaceTypeId
-  ) internal {
-    diamondStorage()
-      .marketplacesData[_marketplace]
-      .marketplaceTypeId = _marketplaceTypeId;
-  }
+  // function _setMarketplaceTypeId(
+  //   address _marketplace,
+  //   uint16 _marketplaceTypeId
+  // ) internal {
+  //   diamondStorage()
+  //     .marketplacesData[_marketplace]
+  //     .marketplaceTypeId = _marketplaceTypeId;
+  // }
 
   function _addMarketplaceToken(address _marketplace, address _token) internal {
     diamondStorage().marketplacesData[_marketplace].paymentTokens.push(_token);

@@ -157,7 +157,7 @@ contract SmolSweeperTest is Test, AERC721Receiver, IDiamondCut {
     troveTokens[0] = address(magic);
     MarketplacesFacet(address(smolsweep)).addMarketplace(
       address(0x09986B4e255B3c548041a30A2Ee312Fe176731c2),
-      LibMarketplaces.TROVE_ID,
+      // LibMarketplaces.TROVE_ID,
       troveTokens
     );
 
@@ -165,7 +165,7 @@ contract SmolSweeperTest is Test, AERC721Receiver, IDiamondCut {
     stratosTokens[0] = address(0);
     MarketplacesFacet(address(smolsweep)).addMarketplace(
       address(0x998EF16Ea4111094EB5eE72fC2c6f4e6E8647666),
-      LibMarketplaces.STRATOS_ID,
+      // LibMarketplaces.STRATOS_ID,
       // address(0xE5c7b4865D7f2B08FaAdF3F6d392E6D6Fa7B903C),
       stratosTokens
     );

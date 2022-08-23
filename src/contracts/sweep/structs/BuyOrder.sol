@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.14;
 
+import "../diamond/libraries/LibMarketplaces.sol";
+
 //           _____                    _____                   _______                   _____            _____                    _____                    _____                    _____
 //          /\    \                  /\    \                 /::\    \                 /\    \          /\    \                  /\    \                  /\    \                  /\    \
 //         /::\    \                /::\____\               /::::\    \               /::\____\        /::\    \                /::\____\                /::\    \                /::\    \
@@ -33,7 +35,7 @@ struct BuyOrder {
   uint64 startTime;
   uint64 expiration;
   address marketplaceAddress;
-  uint16 marketplaceTypeId;
+  MarketplaceType marketplaceType;
   bytes signature;
 }
 
@@ -47,7 +49,7 @@ struct MultiTokenBuyOrder {
   uint64 startTime;
   uint64 expiration;
   address marketplaceAddress;
-  uint16 marketplaceTypeId;
+  MarketplaceType marketplaceType;
   bytes signature;
   address paymentToken;
   bool usingETH;

@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import {LibSweep, PaymentTokenNotGiven} from "../../libraries/LibSweep.sol";
-import {LibMarketplaces, MarketplaceData} from "../../libraries/LibMarketplaces.sol";
+import {LibMarketplaces, MarketplaceData, MarketplaceType} from "../../libraries/LibMarketplaces.sol";
 import "../OwnershipFacet.sol";
 
 import "../../../../token/ANFTReceiver.sol";
@@ -20,32 +20,27 @@ import "../../../errors/BuyError.sol";
 contract MarketplacesFacet is OwnershipModifers {
   using SafeERC20 for IERC20;
 
-  function TROVE_ID() external pure returns (uint256) {
-    return LibMarketplaces.TROVE_ID;
+  function TROVE_ID() external pure returns (MarketplaceType) {
+    return MarketplaceType.TROVE;
   }
 
-  function STRATOS_ID() external pure returns (uint256) {
-    return LibMarketplaces.STRATOS_ID;
+  function SEAPORT_V1_ID() external pure returns (MarketplaceType) {
+    return MarketplaceType.SEAPORT_V1;
   }
 
-  function addMarketplace(
-    address _marketplace,
-    uint16 _marketplaceTypeId,
-    address[] memory _paymentTokens
-  ) external onlyOwner {
-    LibMarketplaces._addMarketplace(
-      _marketplace,
-      _marketplaceTypeId,
-      _paymentTokens
-    );
-  }
-
-  function setMarketplaceTypeId(address _marketplace, uint16 _marketplaceTypeId)
+  function addMarketplace(address _marketplace, address[] memory _paymentTokens)
     external
     onlyOwner
   {
-    LibMarketplaces._setMarketplaceTypeId(_marketplace, _marketplaceTypeId);
+    LibMarketplaces._addMarketplace(_marketplace, _paymentTokens);
   }
+
+  // function setMarketplaceTypeId(address _marketplace, uint16 _marketplaceTypeId)
+  //   external
+  //   onlyOwner
+  // {
+  //   LibMarketplaces._setMarketplaceTypeId(_marketplace, _marketplaceTypeId);
+  // }
 
   function addMarketplaceToken(address _marketplace, address _paymentToken)
     external

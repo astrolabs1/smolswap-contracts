@@ -21,7 +21,7 @@ import {BaseSweepFacet} from "@contracts/sweep/diamond/facets/sweep/BaseSweepFac
 import {MarketplacesFacet} from "@contracts/sweep/diamond/facets/sweep/MarketplacesFacet.sol";
 import {SweepFacet} from "@contracts/sweep/diamond/facets/sweep/SweepFacet.sol";
 import {SweepSwapFacet} from "@contracts/sweep/diamond/facets/sweep/SweepSwapFacet.sol";
-import {LibMarketplaces} from "@contracts/sweep/diamond/libraries/LibMarketplaces.sol";
+import {LibMarketplaces, MarketplaceType} from "@contracts/sweep/diamond/libraries/LibMarketplaces.sol";
 import {LibSweep} from "@contracts/sweep/diamond/libraries/LibSweep.sol";
 
 contract MyScript is Script, IDiamondCut {

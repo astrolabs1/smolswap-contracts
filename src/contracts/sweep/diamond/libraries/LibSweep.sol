@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../../../treasure/interfaces/ITroveMarketplace.sol";
 
 import {LibDiamond} from "./LibDiamond.sol";
-import {LibMarketplaces} from "./LibMarketplaces.sol";
+import {LibMarketplaces, MarketplaceType} from "./LibMarketplaces.sol";
 
 import "../../errors/BuyError.sol";
 import "../../../token/ANFTReceiver.sol";
@@ -30,9 +30,6 @@ error AllReverted();
 error InvalidMsgValue();
 error MsgValueShouldBeZero();
 error PaymentTokenNotGiven(address _paymentToken);
-
-error InvalidMarketplaceId();
-error InvalidMarketplace();
 
 library LibSweep {
   using SafeERC20 for IERC20;
@@ -509,7 +506,7 @@ library LibSweep {
         (_buyOrders[i].usingETH) ? address(0) : _buyOrders[i].paymentToken
       );
 
-      if (_buyOrders[i].marketplaceTypeId == LibMarketplaces.TROVE_ID) {
+      if (_buyOrders[i].marketplaceType == MarketplaceType.TROVE) {
         // check if the listing exists
         uint64 quantityToBuy;
 
@@ -558,9 +555,7 @@ library LibSweep {
           totalSpentAmounts[j] += spentAmount;
           successCount++;
         }
-      } else if (
-        _buyOrders[i].marketplaceTypeId == LibMarketplaces.STRATOS_ID
-      ) {
+      } else if (_buyOrders[i].marketplaceType == MarketplaceType.SEAPORT_V1) {
         // check if total price is less than max spend allowance left
         if (
           (_buyOrders[i].price * _buyOrders[i].quantity) >
