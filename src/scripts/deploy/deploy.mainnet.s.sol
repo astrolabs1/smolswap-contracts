@@ -21,7 +21,7 @@ import {BaseSweepFacet} from "@contracts/sweep/diamond/facets/sweep/BaseSweepFac
 import {MarketplacesFacet} from "@contracts/sweep/diamond/facets/sweep/MarketplacesFacet.sol";
 import {SweepFacet} from "@contracts/sweep/diamond/facets/sweep/SweepFacet.sol";
 import {SweepSwapFacet} from "@contracts/sweep/diamond/facets/sweep/SweepSwapFacet.sol";
-import {LibMarketplaces, MarketplaceType} from "@contracts/sweep/diamond/libraries/LibMarketplaces.sol";
+import {LibMarketplaces} from "@contracts/sweep/diamond/libraries/LibMarketplaces.sol";
 import {LibSweep} from "@contracts/sweep/diamond/libraries/LibSweep.sol";
 
 contract MyScript is Script, IDiamondCut {
@@ -41,7 +41,7 @@ contract MyScript is Script, IDiamondCut {
     //deploy facets
     dCutFacet = new DiamondCutFacet();
     smolsweep = new SmolSweeper(
-      0x5Fc8A00e4141165BCb67419a7498959E4351cc94,
+      0x46868d5F72251842289971867243F8dE54f5a127,
       address(dCutFacet)
     );
     dLoupe = new DiamondLoupeFacet();
@@ -114,19 +114,13 @@ contract MyScript is Script, IDiamondCut {
     //upgrade diamond
     IDiamondCut(address(smolsweep)).diamondCut(cut, address(init), "");
 
-    address[] memory troveTokens = new address[](1);
-    troveTokens[0] = address(0xd1D7B842D04C43FDe2B91453E91d678506A0620B);
+    address[] memory troveTokens = new address[](3);
+    troveTokens[0] = address(0);
+    troveTokens[1] = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+    troveTokens[2] = address(0xB0c7a3Ba49C7a6EaBa6cD4a96C55a1391070Ac9A);
     MarketplacesFacet(address(smolsweep)).addMarketplace(
-      address(0x09986B4e255B3c548041a30A2Ee312Fe176731c2),
+      address(0x68D25992B1b04bE8A70104dE8Cb598170aB9aAD5),
       troveTokens
-    );
-
-    address[] memory stratosTokens = new address[](1);
-    stratosTokens[0] = address(0);
-    MarketplacesFacet(address(smolsweep)).addMarketplace(
-      address(0x998EF16Ea4111094EB5eE72fC2c6f4e6E8647666),
-      // address(0xE5c7b4865D7f2B08FaAdF3F6d392E6D6Fa7B903C),
-      stratosTokens
     );
 
     vm.stopBroadcast();

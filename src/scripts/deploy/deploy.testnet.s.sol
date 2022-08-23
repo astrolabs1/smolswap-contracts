@@ -41,7 +41,7 @@ contract MyScript is Script, IDiamondCut {
     //deploy facets
     dCutFacet = new DiamondCutFacet();
     smolsweep = new SmolSweeper(
-      0x5Fc8A00e4141165BCb67419a7498959E4351cc94,
+      0x46868d5F72251842289971867243F8dE54f5a127,
       address(dCutFacet)
     );
     dLoupe = new DiamondLoupeFacet();

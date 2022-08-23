@@ -23,52 +23,6 @@ import "../../../structs/BuyOrder.sol";
 contract SweepFacet is OwnershipModifers, ISmolSweeper {
   using SafeERC20 for IERC20;
 
-  // function buyItemsSingleToken(
-  //   BuyOrder[] calldata _buyOrders,
-  //   bool _usingETH,
-  //   uint16 _inputSettingsBitFlag,
-  //   address _paymentToken,
-  //   uint256 _maxSpendIncFees
-  // ) external payable {
-  //   if (_usingETH) {
-  //     if (_maxSpendIncFees != msg.value) revert InvalidMsgValue();
-  //   } else {
-  //     if (msg.value != 0) revert MsgValueShouldBeZero();
-  //     // transfer payment tokens to this contract
-
-  //     IERC20(_paymentToken).safeTransferFrom(
-  //       msg.sender,
-  //       address(this),
-  //       _maxSpendIncFees
-  //     );
-  //     // IERC20(_paymentToken).approve(
-  //     //   address(LibSweep.diamondStorage().troveMarketplace),
-  //     //   _maxSpendIncFees
-  //     // );
-  //   }
-  //   (uint256 totalSpentAmount, uint256 successCount) = LibSweep
-  //     ._buyItemsSingleToken(
-  //       _buyOrders,
-  //       _paymentToken,
-  //       _usingETH,
-  //       _inputSettingsBitFlag,
-  //       LibSweep._calculateAmountWithoutFees(_maxSpendIncFees)
-  //     );
-
-  //   // transfer back failed payment tokens to the buyer
-  //   if (successCount == 0) revert AllReverted();
-  //   uint256 refundAmount = _maxSpendIncFees -
-  //     (totalSpentAmount + LibSweep._calculateFee(totalSpentAmount));
-  //   if (_usingETH) {
-  //     payable(msg.sender).transfer(refundAmount);
-  //     emit LibSweep.RefundedToken(address(0), refundAmount);
-  //     // emit refunded event
-  //   } else {
-  //     IERC20(_paymentToken).safeTransfer(msg.sender, refundAmount);
-  //     emit LibSweep.RefundedToken(address(_paymentToken), refundAmount);
-  //   }
-  // }
-
   function buyItemsMultiTokens(
     MultiTokenBuyOrder[] calldata _buyOrders,
     uint16 _inputSettingsBitFlag,

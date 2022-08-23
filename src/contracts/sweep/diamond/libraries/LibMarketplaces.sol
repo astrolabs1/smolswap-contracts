@@ -27,6 +27,8 @@ error InvalidMarketplaceId();
 error InvalidMarketplace();
 
 library LibMarketplaces {
+  using SafeERC20 for IERC20;
+  
   bytes32 constant DIAMOND_STORAGE_POSITION =
     keccak256("diamond.standard.sweep.storage");
 
