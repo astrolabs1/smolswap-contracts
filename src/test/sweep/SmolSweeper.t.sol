@@ -154,7 +154,7 @@ contract SmolSweeperTest is Test, AERC721Receiver, IDiamondCut {
     );
 
     address[] memory troveTokens = new address[](1);
-    troveTokens[0] = address(0xd1D7B842D04C43FDe2B91453E91d678506A0620B);
+    troveTokens[0] = address(magic);
     MarketplacesFacet(address(smolsweep)).addMarketplace(
       address(0x09986B4e255B3c548041a30A2Ee312Fe176731c2),
       LibMarketplaces.TROVE_ID,

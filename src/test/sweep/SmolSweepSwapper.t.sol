@@ -25,6 +25,9 @@ import {MarketplacesFacet} from "@contracts/sweep/diamond/facets/sweep/Marketpla
 import {SweepFacet} from "@contracts/sweep/diamond/facets/sweep/SweepFacet.sol";
 import {SweepSwapFacet} from "@contracts/sweep/diamond/facets/sweep/SweepSwapFacet.sol";
 
+import {LibSweep} from "@contracts/sweep/diamond/libraries/LibSweep.sol";
+import {LibMarketplaces} from "@contracts/sweep/diamond/libraries/LibMarketplaces.sol";
+
 contract MyScript is Test, IDiamondCut {
   SmolSweeper smolsweep;
   DiamondCutFacet dCutFacet;

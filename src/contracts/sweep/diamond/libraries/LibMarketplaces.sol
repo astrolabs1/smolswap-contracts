@@ -7,6 +7,8 @@ import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../../../treasure/interfaces/ITroveMarketplace.sol";
 
+import "@forge-std/src/console.sol";
+
 struct MarketplaceData {
   address[] paymentTokens;
   uint16 marketplaceTypeId;
@@ -50,6 +52,7 @@ library LibMarketplaces {
     );
 
     for (uint256 i = 0; i < _paymentTokens.length; i++) {
+      console.log(i, _paymentTokens[i]);
       if (_paymentTokens[i] != address(0)) {
         IERC20(_paymentTokens[i]).approve(_marketplace, type(uint256).max);
       }

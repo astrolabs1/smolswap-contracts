@@ -1,19 +1,25 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.14;
 
-import "@v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
-
 enum SwapType {
-  NO_SWAP,
-  SWAP_ETH_TO_EXACT_TOKEN,
-  SWAP_TOKEN_TO_EXACT_ETH,
-  SWAP_TOKEN_TO_EXACT_TOKEN
+  NO_SWAP, // no swapping and use amountOut as amount inputted
+  SWAP_ETH_TO_EXACT_TOKENS,
+  SWAP_TOKENS_TO_EXACT_ETH,
+  SWAP_TOKENS_TO_EXACT_TOKENS,
+  SWAP_EXACT_ETH_TO_TOKENS,
+  SWAP_EXACT_TOKENS_TO_ETH,
+  SWAP_EXACT_TOKENS_TO_TOKENS
+}
+
+enum SwapRouterType {
+  UNISWAP_V2,
+  UNISWAP_V3
 }
 
 struct Swap {
   uint256 amountIn;
   uint256 amountOut;
-  IUniswapV2Router02 router;
+  address router;
   SwapType swapType;
   address[] path;
   uint64 deadline;
