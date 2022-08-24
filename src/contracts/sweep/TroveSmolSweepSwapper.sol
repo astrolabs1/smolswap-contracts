@@ -23,18 +23,18 @@ pragma solidity ^0.8.14;
 //         \::/    /                \::/    /                 ~~                      \::/    /        \::/    /                \::/____/                \::/    /
 //          \/____/                  \/____/                                           \/____/          \/____/                  ~~                       \/____/
 
-import "./base/ABaseTroveSmolSweepSwapper.sol";
+// import "./base/ABaseTroveSmolSweepSwapper.sol";
 
-contract TroveSmolSweepSwapper is ABaseTroveSmolSweepSwapper {
-    constructor(
-        address _troveMarketplace,
-        address _defaultPaymentToken,
-        address _weth
-    )
-        ABaseTroveSmolSweepSwapper(
-            _troveMarketplace,
-            _defaultPaymentToken,
-            _weth
-        )
-    {}
-}
+// contract TroveSmolSweepSwapper is ABaseTroveSmolSweepSwapper {
+//     constructor(
+//         address _troveMarketplace,
+//         address _defaultPaymentToken,
+//         address _weth
+//     )
+//         ABaseTroveSmolSweepSwapper(
+//             _troveMarketplace,
+//             _defaultPaymentToken,
+//             _weth
+//         )
+//     {}
+// }

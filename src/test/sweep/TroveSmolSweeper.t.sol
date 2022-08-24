@@ -159,7 +159,7 @@ contract TroveSmolSweepSwapperTest is Test, AERC721Receiver {
         assertEq(erc721.balanceOf(SELLERS[0]), 0);
     }
 
-    function test_buyItemsMultiTokensSingleERC721() public {
+    function test_buyItemsManyTokensSingleERC721() public {
         magic.mint(BUYER, 1e18);
 
         erc721.safeMint(SELLERS[0]);
@@ -198,7 +198,7 @@ contract TroveSmolSweepSwapperTest is Test, AERC721Receiver {
         amounts[0] = 1e18;
         uint256 sellerBalanceMagicBefore = magic.balanceOf(SELLERS[0]);
         uint256 buyerBalanceMagicBefore = magic.balanceOf(BUYER);
-        smolsweep.buyItemsMultiTokens(buyParams, 0, tokens, amounts);
+        smolsweep.buyItemsManyTokens(buyParams, 0, tokens, amounts);
 
         uint256 sellerBalanceMagicAfter = magic.balanceOf(SELLERS[0]);
         uint256 buyerBalanceMagicAfter = magic.balanceOf(BUYER);
@@ -322,7 +322,7 @@ contract TroveSmolSweepSwapperTest is Test, AERC721Receiver {
             uint256 buyerBalanceETHBefore = BUYER.balance;
 
             vm.prank(BUYER, BUYER);
-            smolsweep.buyItemsMultiTokens{value: price1}(
+            smolsweep.buyItemsManyTokens{value: price1}(
                 buyParams,
                 0,
                 tokens,
@@ -406,7 +406,7 @@ contract TroveSmolSweepSwapperTest is Test, AERC721Receiver {
         assertEq(erc721.ownerOf(tokenId), BUYER);
     }
 
-    function test_sweepItemsMultiTokensSingleERC721() public {
+    function test_sweepItemsManyTokensSingleERC721() public {
         magic.mint(BUYER, 1e18);
 
         erc721.safeMint(SELLERS[0]);
@@ -449,7 +449,7 @@ contract TroveSmolSweepSwapperTest is Test, AERC721Receiver {
         uint256 sellerBalanceMagicBefore = magic.balanceOf(SELLERS[0]);
         uint256 buyerBalanceMagicBefore = magic.balanceOf(BUYER);
         vm.prank(BUYER, BUYER);
-        smolsweep.sweepItemsMultiTokens(
+        smolsweep.sweepItemsManyTokens(
             buyParams,
             0,
             tokens,
@@ -522,7 +522,7 @@ contract TroveSmolSweepSwapperTest is Test, AERC721Receiver {
         assertEq(erc721ETH.ownerOf(0), BUYER);
     }
 
-    function test_sweepItemsMultiTokensUsingETHSingleERC721() public {
+    function test_sweepItemsManyTokensUsingETHSingleERC721() public {
         magic.mint(OWNER, 1e18);
 
         erc721ETH.safeMint(SELLERS[0]);
@@ -564,7 +564,7 @@ contract TroveSmolSweepSwapperTest is Test, AERC721Receiver {
         uint256 buyerBalanceETHBefore = BUYER.balance;
 
         vm.prank(BUYER, BUYER);
-        smolsweep.sweepItemsMultiTokens{value: price}(
+        smolsweep.sweepItemsManyTokens{value: price}(
             buyParams,
             0,
             tokens,
@@ -657,7 +657,7 @@ contract TroveSmolSweepSwapperTest is Test, AERC721Receiver {
             uint256 buyerBalanceETHBefore = BUYER.balance;
 
             vm.prank(BUYER, BUYER);
-            smolsweep.sweepItemsMultiTokens{value: price1}(
+            smolsweep.sweepItemsManyTokens{value: price1}(
                 buyParams,
                 0,
                 tokens,

@@ -23,30 +23,30 @@ pragma solidity ^0.8.14;
 //         \::/    /                \::/    /                 ~~                      \::/    /        \::/    /                \::/____/                \::/    /
 //          \/____/                  \/____/                                           \/____/          \/____/                  ~~                       \/____/
 
-import "../../treasure/interfaces/ITroveMarketplace.sol";
-import "./ITroveSmolSweeper.sol";
+// import "../../treasure/interfaces/ITroveMarketplace.sol";
+// import "./ITroveSmolSweeper.sol";
 
-interface ITroveSmolSweepSwapper is ITroveSmolSweeper {
-    function buyUsingOtherToken(
-        BuyItemParams[] calldata _buyOrders,
-        uint16 _inputSettingsBitFlag,
-        address _inputTokenAddress,
-        uint256 _maxInputTokenAmount,
-        address[] calldata _path,
-        uint32 _routerId,
-        uint256 _deadline
-    ) external;
+// interface ITroveSmolSweepSwapper is ITroveSmolSweeper {
+//     function buyUsingOtherToken(
+//         BuyItemParams[] calldata _buyOrders,
+//         uint16 _inputSettingsBitFlag,
+//         address _inputTokenAddress,
+//         uint256 _maxInputTokenAmount,
+//         address[] calldata _path,
+//         uint32 _routerId,
+//         uint256 _deadline
+//     ) external;
 
-    function sweepUsingOtherToken(
-        BuyItemParams[] calldata _buyOrders,
-        uint16 _inputSettingsBitFlag,
-        address _inputTokenAddress,
-        uint32 _maxSuccesses,
-        uint32 _maxFailures,
-        uint256 _maxInputTokenAmount,
-        uint256 _minSpend,
-        address[] calldata _path,
-        uint32 _routerId,
-        uint256 _deadline
-    ) external;
-}
+//     function sweepUsingOtherToken(
+//         BuyItemParams[] calldata _buyOrders,
+//         uint16 _inputSettingsBitFlag,
+//         address _inputTokenAddress,
+//         uint32 _maxSuccesses,
+//         uint32 _maxFailures,
+//         uint256 _maxInputTokenAmount,
+//         uint256 _minSpend,
+//         address[] calldata _path,
+//         uint32 _routerId,
+//         uint256 _deadline
+//     ) external;
+// }

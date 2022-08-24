@@ -310,7 +310,7 @@ abstract contract ABaseTroveSmolSweeper is
         }
     }
 
-    function buyItemsMultiTokens(
+    function buyItemsManyTokens(
         BuyItemParams[] calldata _buyOrders,
         uint16 _inputSettingsBitFlag,
         address[] calldata _inputTokenAddresses,
@@ -345,7 +345,7 @@ abstract contract ABaseTroveSmolSweeper is
         (
             uint256[] memory totalSpentAmount,
             uint256 successCount
-        ) = _buyItemsMultiTokens(
+        ) = _buyItemsManyTokens(
                 _buyOrders,
                 _inputSettingsBitFlag,
                 _inputTokenAddresses,
@@ -379,7 +379,7 @@ abstract contract ABaseTroveSmolSweeper is
         }
     }
 
-    function _buyItemsMultiTokens(
+    function _buyItemsManyTokens(
         BuyItemParams[] memory _buyOrders,
         uint16 _inputSettingsBitFlag,
         address[] memory _inputTokenAddresses,
@@ -529,7 +529,7 @@ abstract contract ABaseTroveSmolSweeper is
         }
     }
 
-    function sweepItemsMultiTokens(
+    function sweepItemsManyTokens(
         BuyItemParams[] calldata _buyOrders,
         uint16 _inputSettingsBitFlag,
         address[] calldata _inputTokenAddresses,
@@ -569,7 +569,7 @@ abstract contract ABaseTroveSmolSweeper is
             uint256[] memory totalSpentAmount,
             uint256 successCount,
 
-        ) = _sweepItemsMultiTokens(
+        ) = _sweepItemsManyTokens(
                 _buyOrders,
                 _inputSettingsBitFlag,
                 _inputTokenAddresses,
@@ -605,7 +605,7 @@ abstract contract ABaseTroveSmolSweeper is
         }
     }
 
-    function _sweepItemsMultiTokens(
+    function _sweepItemsManyTokens(
         BuyItemParams[] memory _buyOrders,
         uint16 _inputSettingsBitFlag,
         address[] memory _inputTokenAddresses,
