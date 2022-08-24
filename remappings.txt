@@ -2,6 +2,7 @@
 @contracts/=src/contracts/
 @test/=src/tests/
 @v2-core/=lib/v2-core/
-@v2-periphery=lib/v2-periphery
-@utils/=src/utils
-@forge-std/=lib/forge-std
+@v2-periphery=lib/v2-periphery/
+@utils/=src/utils/
+@forge-std/=lib/forge-std/
+@ERC721A/=lib/ERC721A/
