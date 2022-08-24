@@ -20,7 +20,7 @@ import "../../../structs/BuyOrder.sol";
 
 // import "@forge-std/src/console.sol";
 
-contract SweepFacet is OwnershipModifers, ISmolSweeper {
+contract SweepTroveFacet is OwnershipModifers, ISmolSweeper {
   using SafeERC20 for IERC20;
 
   function buyItemsMultiTokens(
