@@ -3,10 +3,15 @@ pragma solidity ^0.8.14;
 
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
-contract BatchTransfer {
+contract BatchTransferV2 {
   struct TransferItem {
     address nftAddress;
     uint256 tokenId;
+  }
+
+  struct TransferMultiItem {
+    address nftAddress;
+    uint256[] tokenIds;
   }
 
   constructor() {}
@@ -26,38 +31,41 @@ contract BatchTransfer {
       );
     }
   }
-}
-
-contract BatchTransferV2 {
-  struct TransferItem {
-    address nftAddress;
-    uint256[] tokenIds;
-  }
-
-  constructor() {}
 
   /** @notice Transfers given ERC-721 items from sender to recipient.
      @param  items         Struct containing all nftAddress and tokenId pairs to send
      @param  recipient     Sending to
     */
-  function batchTransfer(TransferItem[] calldata items, address recipient)
-    external
-  {
-    uint16 i = 0;
-    for (; i < items.length; ) {
-      uint16 j = 0;
-      for (; j < items[i].tokenIds.length; ) {
+  function batchTransferMulti(
+    TransferMultiItem[] calldata items,
+    address recipient
+  ) external {
+    for (uint16 i = 0; i < items.length; i++) {
+      for (uint16 j = 0; j < items[i].tokenIds.length; j++) {
         IERC721(items[i].nftAddress).safeTransferFrom(
           msg.sender,
           recipient,
           items[i].tokenIds[j]
         );
-        unchecked {
-          ++j;
-        }
       }
-      unchecked {
-        ++i;
+    }
+  }
+
+  /** @notice Transfers given ERC-721 items from sender to recipient.
+     @param  items         Struct containing all nftAddress and tokenId pairs to send
+     @param  recipient     Sending to
+    */
+  function batchTransferMultiERC721A(
+    TransferMultiItem[] calldata items,
+    address recipient
+  ) external {
+    for (uint16 i = 0; i < items.length; i++) {
+      for (uint16 j = 0; j < items[i].tokenIds.length; j++) {
+        IERC721(items[i].nftAddress).safeTransferFrom(
+          msg.sender,
+          recipient,
+          items[i].tokenIds[j]
+        );
       }
     }
   }
