@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.14;
 
-import "ds-test/test.sol";
-import "@utils/console.sol";
-import "@cheatcodes/interfaces/ICheatCodes.sol";
+import "@forge-std/src/Test.sol";
 import "@contracts/sweep/TroveSmolSweepSwapper.sol";
 
 import "@contracts/treasure/trove/TroveMarketplace.sol";

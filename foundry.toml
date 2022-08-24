@@ -7,11 +7,9 @@ auto_detect_solc = true
 remappings = [
     '@utils/=src/utils',
     '@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/',
-    'openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/',
     '@contracts/=src/contracts/',
     '@openzeppelin/=lib/openzeppelin-contracts/',
-    'ds-test/=lib/ds-test/src/',
-    'openzeppelin-contracts/=lib/openzeppelin-contracts/',
+    '@forge-std/=lib/forge-std/'
 ]
 optimizer = false
 # optimizer = true
@@ -28,11 +26,9 @@ auto_detect_solc = true
 remappings = [
         '@utils/=src/utils',
     '@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/',
-    'openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/',
     '@contracts/=src/contracts/',
     '@openzeppelin/=lib/openzeppelin-contracts/',
-    'ds-test/=lib/ds-test/src/',
-    'openzeppelin-contracts/=lib/openzeppelin-contracts/',
+    '@forge-std/=lib/forge-std/'
 ]
 optimizer = false
 optimizer_runs = 10

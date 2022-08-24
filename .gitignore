@@ -34,3 +34,8 @@ src/**/*.ts
 .env.rinkeby
 
 scripts/**/*
+
+lib/**/*
+
+
+broadcast/**/*

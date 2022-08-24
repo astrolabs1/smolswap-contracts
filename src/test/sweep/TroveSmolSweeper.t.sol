@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.14;
 
-import "ds-test/test.sol";
-import "@utils/console.sol";
-import "@cheatcodes/interfaces/ICheatCodes.sol";
+import "@forge-std/src/Test.sol";
 import "@contracts/sweep/TroveSmolSweeper.sol";
 
 import "@contracts/treasure/trove/TroveMarketplace.sol";
@@ -12,9 +10,7 @@ import "@contracts/weth/WETH9.sol";
 import "@contracts/assets/erc721/NFTERC721.sol";
 import "@contracts/assets/erc1155/NFTERC1155.sol";
 
-contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
-    ICheatCodes public constant CHEATCODES = ICheatCodes(HEVM_ADDRESS);
-
+contract TroveSmolSweepSwapperTest is Test, AERC721Receiver {
     TroveSmolSweeper public smolsweep;
 
     TroveMarketplace public trove;
@@ -91,7 +87,7 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
 
         uint128 price = 1e9;
 
-        CHEATCODES.startPrank(SELLERS[0], SELLERS[0]);
+        vm.startPrank(SELLERS[0], SELLERS[0]);
         erc721.setApprovalForAll(address(trove), true);
         trove.createListing(
             address(erc721),
@@ -101,9 +97,9 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
             uint64(block.timestamp + 100),
             address(magic)
         );
-        CHEATCODES.stopPrank();
+        vm.stopPrank();
 
-        CHEATCODES.startPrank(BUYER, BUYER);
+        vm.startPrank(BUYER, BUYER);
         magic.approve(address(trove), price);
         BuyItemParams[] memory buyParams = new BuyItemParams[](1);
         buyParams[0] = BuyItemParams(
@@ -126,7 +122,7 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
 
         uint128 price = 1e9;
 
-        CHEATCODES.startPrank(SELLERS[0], SELLERS[0]);
+        vm.startPrank(SELLERS[0], SELLERS[0]);
         erc721.setApprovalForAll(address(trove), true);
         trove.createListing(
             address(erc721),
@@ -136,9 +132,9 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
             uint64(block.timestamp + 100),
             address(magic)
         );
-        CHEATCODES.stopPrank();
+        vm.stopPrank();
 
-        CHEATCODES.startPrank(BUYER, BUYER);
+        vm.startPrank(BUYER, BUYER);
         magic.approve(address(smolsweep), 1e19);
         BuyItemParams[] memory buyParams = new BuyItemParams[](1);
         buyParams[0] = BuyItemParams(
@@ -171,7 +167,7 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
 
         uint128 price = 1e9;
 
-        CHEATCODES.startPrank(SELLERS[0], SELLERS[0]);
+        vm.startPrank(SELLERS[0], SELLERS[0]);
         erc721.setApprovalForAll(address(trove), true);
         trove.createListing(
             address(erc721),
@@ -181,9 +177,9 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
             uint64(block.timestamp + 100),
             address(magic)
         );
-        CHEATCODES.stopPrank();
+        vm.stopPrank();
 
-        CHEATCODES.startPrank(BUYER, BUYER);
+        vm.startPrank(BUYER, BUYER);
         magic.approve(address(smolsweep), 1e19);
         BuyItemParams[] memory buyParams = new BuyItemParams[](1);
         buyParams[0] = BuyItemParams(
@@ -222,7 +218,7 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
 
         uint128 price = 1e9;
 
-        CHEATCODES.startPrank(SELLERS[0], SELLERS[0]);
+        vm.startPrank(SELLERS[0], SELLERS[0]);
         erc721ETH.setApprovalForAll(address(trove), true);
         trove.createListing(
             address(erc721ETH),
@@ -232,11 +228,11 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
             uint64(block.timestamp + 100),
             address(weth)
         );
-        CHEATCODES.stopPrank();
+        vm.stopPrank();
 
         // uint256 sellerBalanceMagicBefore = magic.balanceOf(SELLERS[0]);
         // uint256 buyerBalanceMagicBefore = magic.balanceOf(BUYER);
-        //         CHEATCODES.prank(BUYER, BUYER);
+        //         vm.prank(BUYER, BUYER);
         BuyItemParams[] memory buyParams = new BuyItemParams[](1);
         buyParams[0] = BuyItemParams(
             address(erc721ETH),
@@ -266,7 +262,7 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
         uint128 price1 = 1e9;
 
         {
-            CHEATCODES.startPrank(SELLERS[0], SELLERS[0]);
+            vm.startPrank(SELLERS[0], SELLERS[0]);
             erc721.setApprovalForAll(address(trove), true);
             trove.createListing(
                 address(erc721),
@@ -276,9 +272,9 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
                 uint64(block.timestamp + 100),
                 address(magic)
             );
-            CHEATCODES.stopPrank();
+            vm.stopPrank();
 
-            CHEATCODES.startPrank(SELLERS[1], SELLERS[1]);
+            vm.startPrank(SELLERS[1], SELLERS[1]);
             erc721ETH.setApprovalForAll(address(trove), true);
             trove.createListing(
                 address(erc721ETH),
@@ -288,9 +284,9 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
                 uint64(block.timestamp + 100),
                 address(weth)
             );
-            CHEATCODES.stopPrank();
+            vm.stopPrank();
 
-            CHEATCODES.prank(BUYER, BUYER);
+            vm.prank(BUYER, BUYER);
             magic.approve(address(smolsweep), 1e19);
             BuyItemParams[] memory buyParams = new BuyItemParams[](2);
             buyParams[0] = BuyItemParams(
@@ -325,7 +321,7 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
             uint256 buyerBalanceMagicBefore = magic.balanceOf(BUYER);
             uint256 buyerBalanceETHBefore = BUYER.balance;
 
-            CHEATCODES.prank(BUYER, BUYER);
+            vm.prank(BUYER, BUYER);
             smolsweep.buyItemsMultiTokens{value: price1}(
                 buyParams,
                 0,
@@ -362,7 +358,7 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
 
         uint128 price = 1e9;
 
-        CHEATCODES.startPrank(SELLERS[0], SELLERS[0]);
+        vm.startPrank(SELLERS[0], SELLERS[0]);
         erc721.setApprovalForAll(address(trove), true);
         trove.createListing(
             address(erc721),
@@ -372,9 +368,9 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
             uint64(block.timestamp + 100),
             address(magic)
         );
-        CHEATCODES.stopPrank();
+        vm.stopPrank();
 
-        CHEATCODES.prank(BUYER, BUYER);
+        vm.prank(BUYER, BUYER);
         magic.approve(address(smolsweep), 1e19);
         BuyItemParams[] memory buyParams = new BuyItemParams[](1);
         buyParams[0] = BuyItemParams(
@@ -389,7 +385,7 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
 
         uint256 sellerBalanceMagicBefore = magic.balanceOf(SELLERS[0]);
         uint256 buyerBalanceMagicBefore = magic.balanceOf(BUYER);
-        CHEATCODES.prank(BUYER, BUYER);
+        vm.prank(BUYER, BUYER);
         smolsweep.sweepItemsSingleToken(
             buyParams,
             0,
@@ -418,7 +414,7 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
 
         uint128 price = 1e9;
 
-        CHEATCODES.startPrank(SELLERS[0], SELLERS[0]);
+        vm.startPrank(SELLERS[0], SELLERS[0]);
         erc721.setApprovalForAll(address(trove), true);
         trove.createListing(
             address(erc721),
@@ -428,9 +424,9 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
             uint64(block.timestamp + 100),
             address(magic)
         );
-        CHEATCODES.stopPrank();
+        vm.stopPrank();
 
-        CHEATCODES.prank(BUYER, BUYER);
+        vm.prank(BUYER, BUYER);
         magic.approve(address(smolsweep), 1e19);
         BuyItemParams[] memory buyParams = new BuyItemParams[](1);
         buyParams[0] = BuyItemParams(
@@ -452,7 +448,7 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
 
         uint256 sellerBalanceMagicBefore = magic.balanceOf(SELLERS[0]);
         uint256 buyerBalanceMagicBefore = magic.balanceOf(BUYER);
-        CHEATCODES.prank(BUYER, BUYER);
+        vm.prank(BUYER, BUYER);
         smolsweep.sweepItemsMultiTokens(
             buyParams,
             0,
@@ -480,7 +476,7 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
         uint256 tokenId = 0;
         uint128 price = 1e9;
 
-        CHEATCODES.startPrank(SELLERS[0], SELLERS[0]);
+        vm.startPrank(SELLERS[0], SELLERS[0]);
         erc721ETH.setApprovalForAll(address(trove), true);
         trove.createListing(
             address(erc721ETH),
@@ -490,7 +486,7 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
             uint64(block.timestamp + 100),
             address(weth)
         );
-        CHEATCODES.stopPrank();
+        vm.stopPrank();
 
         BuyItemParams[] memory buyParams = new BuyItemParams[](1);
         buyParams[0] = BuyItemParams(
@@ -506,7 +502,7 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
         payable(BUYER).transfer(price);
         uint256 sellerBalanceETHBefore = SELLERS[0].balance;
         uint256 buyerBalanceETHBefore = BUYER.balance;
-        CHEATCODES.prank(BUYER, BUYER);
+        vm.prank(BUYER, BUYER);
         smolsweep.sweepItemsSingleToken{value: price}(
             buyParams,
             0,
@@ -533,7 +529,7 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
         uint256 tokenId = 0;
         uint128 price = 1e9;
 
-        CHEATCODES.startPrank(SELLERS[0], SELLERS[0]);
+        vm.startPrank(SELLERS[0], SELLERS[0]);
         erc721ETH.setApprovalForAll(address(trove), true);
         trove.createListing(
             address(erc721ETH),
@@ -543,7 +539,7 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
             uint64(block.timestamp + 100),
             address(weth)
         );
-        CHEATCODES.stopPrank();
+        vm.stopPrank();
 
         BuyItemParams[] memory buyParams = new BuyItemParams[](1);
         buyParams[0] = BuyItemParams(
@@ -567,7 +563,7 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
         uint256 sellerBalanceETHBefore = SELLERS[0].balance;
         uint256 buyerBalanceETHBefore = BUYER.balance;
 
-        CHEATCODES.prank(BUYER, BUYER);
+        vm.prank(BUYER, BUYER);
         smolsweep.sweepItemsMultiTokens{value: price}(
             buyParams,
             0,
@@ -598,7 +594,7 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
         uint128 price1 = 1e9;
 
         {
-            CHEATCODES.startPrank(SELLERS[0], SELLERS[0]);
+            vm.startPrank(SELLERS[0], SELLERS[0]);
             erc721.setApprovalForAll(address(trove), true);
             trove.createListing(
                 address(erc721),
@@ -608,9 +604,9 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
                 uint64(block.timestamp + 100),
                 address(magic)
             );
-            CHEATCODES.stopPrank();
+            vm.stopPrank();
 
-            CHEATCODES.startPrank(SELLERS[1], SELLERS[1]);
+            vm.startPrank(SELLERS[1], SELLERS[1]);
             erc721ETH.setApprovalForAll(address(trove), true);
             trove.createListing(
                 address(erc721ETH),
@@ -620,9 +616,9 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
                 uint64(block.timestamp + 100),
                 address(weth)
             );
-            CHEATCODES.stopPrank();
+            vm.stopPrank();
 
-            CHEATCODES.prank(BUYER, BUYER);
+            vm.prank(BUYER, BUYER);
             magic.approve(address(smolsweep), 1e19);
             BuyItemParams[] memory buyParams = new BuyItemParams[](2);
             buyParams[0] = BuyItemParams(
@@ -660,7 +656,7 @@ contract TroveSmolSweepSwapperTest is DSTest, AERC721Receiver {
             uint256 buyerBalanceMagicBefore = magic.balanceOf(BUYER);
             uint256 buyerBalanceETHBefore = BUYER.balance;
 
-            CHEATCODES.prank(BUYER, BUYER);
+            vm.prank(BUYER, BUYER);
             smolsweep.sweepItemsMultiTokens{value: price1}(
                 buyParams,
                 0,
