@@ -21,7 +21,7 @@ import "../../../structs/BuyOrder.sol";
 
 import "@v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 
-import "@contracts/sweep/structs/Swap.sol";
+import "@contracts/sweep/structs/InputToken.sol";
 
 error WrongInputType();
 
@@ -33,35 +33,48 @@ contract SweepSwapFacet is OwnershipModifers {
     MultiTokenBuyOrder[] calldata _buyOrders,
     uint16 _inputSettingsBitFlag,
     address[] calldata _paymentTokens,
-    InputTokens[][] calldata _swapsArrs
+    InputToken[][] calldata _swapsArrs
   ) external payable {
     uint256 length = _swapsArrs.length;
     uint256[] memory amounts = new uint256[](_paymentTokens.length);
 
     for (uint256 i = 0; i < length; i++) {
-      InputTokens[] memory _swaps = _swapsArrs[i];
+      InputToken[] memory _swaps = _swapsArrs[i];
+
+      uint256[] memory swapAmounts;
       uint256 swapLength = _swaps.length;
       for (uint256 j = 0; j < swapLength; i++) {
-        uint256 tokenInd = LibSweep._getTokenIndex(
-          _paymentTokens,
-          (_buyOrders[i].usingETH) ? address(0) : _buyOrders[i].paymentToken
-        );
-
         if (_swaps[i].inputType == InputType.PAYMENT_TOKENS) {
           IERC20(_swaps[i].path[0]).transferFrom(
             msg.sender,
             address(this),
             _swaps[i].amountIn
           );
+
+          amounts[
+            LibSweep._getTokenIndex(
+              _paymentTokens,
+              _swaps[_swaps.length - 1].path[
+                _swaps[_swaps.length - 1].path.length - 1
+              ]
+            )
+          ] += _swaps[i].amountIn;
         } else if (_swaps[i].inputType == InputType.SWAP_EXACT_ETH_TO_TOKENS) {
-          IUniswapV2Router02(_swaps[i].router).swapExactETHForTokens{
-            value: msg.value
-          }(
+          swapAmounts = IUniswapV2Router02(_swaps[i].router)
+            .swapExactETHForTokens{value: msg.value}(
             _swaps[i].amountOut,
             _swaps[i].path,
             address(this),
             _swaps[i].deadline
           );
+          amounts[
+            LibSweep._getTokenIndex(
+              _paymentTokens,
+              _swaps[_swaps.length - 1].path[
+                _swaps[_swaps.length - 1].path.length - 1
+              ]
+            )
+          ] += swapAmounts[swapAmounts.length - 1];
         } else if (_swaps[i].inputType == InputType.SWAP_EXACT_TOKENS_TO_ETH) {
           IERC20(_swaps[i].path[0]).transferFrom(
             msg.sender,
@@ -72,13 +85,22 @@ contract SweepSwapFacet is OwnershipModifers {
             _swaps[i].router,
             _swaps[i].amountIn
           );
-          IUniswapV2Router02(_swaps[i].router).swapTokensForExactETH(
-            _swaps[i].amountOut,
-            _swaps[i].amountIn,
-            _swaps[i].path,
-            address(this),
-            _swaps[i].deadline
-          );
+          swapAmounts = IUniswapV2Router02(_swaps[i].router)
+            .swapTokensForExactETH(
+              _swaps[i].amountOut,
+              _swaps[i].amountIn,
+              _swaps[i].path,
+              address(this),
+              _swaps[i].deadline
+            );
+          amounts[
+            LibSweep._getTokenIndex(
+              _paymentTokens,
+              _swaps[_swaps.length - 1].path[
+                _swaps[_swaps.length - 1].path.length - 1
+              ]
+            )
+          ] += swapAmounts[swapAmounts.length - 1];
         } else if (
           _swaps[i].inputType == InputType.SWAP_EXACT_TOKENS_TO_TOKENS
         ) {
@@ -91,23 +113,38 @@ contract SweepSwapFacet is OwnershipModifers {
             _swaps[i].router,
             _swaps[i].amountIn
           );
-          IUniswapV2Router02(_swaps[i].router).swapTokensForExactTokens(
-            _swaps[i].amountOut,
-            _swaps[i].amountIn,
-            _swaps[i].path,
-            address(this),
-            _swaps[i].deadline
-          );
+          swapAmounts = IUniswapV2Router02(_swaps[i].router)
+            .swapTokensForExactTokens(
+              _swaps[i].amountOut,
+              _swaps[i].amountIn,
+              _swaps[i].path,
+              address(this),
+              _swaps[i].deadline
+            );
+          amounts[
+            LibSweep._getTokenIndex(
+              _paymentTokens,
+              _swaps[_swaps.length - 1].path[
+                _swaps[_swaps.length - 1].path.length - 1
+              ]
+            )
+          ] += swapAmounts[swapAmounts.length - 1];
         } else if (_swaps[i].inputType == InputType.SWAP_ETH_TO_EXACT_TOKENS) {
-          uint256[] memory swapAmounts = IUniswapV2Router02(_swaps[i].router)
+          swapAmounts = IUniswapV2Router02(_swaps[i].router)
             .swapETHForExactTokens{value: msg.value}(
             _swaps[i].amountOut,
             _swaps[i].path,
             address(this),
             _swaps[i].deadline
           );
-
-          // refund extra input
+          amounts[
+            LibSweep._getTokenIndex(
+              _paymentTokens,
+              _swaps[_swaps.length - 1].path[
+                _swaps[_swaps.length - 1].path.length - 1
+              ]
+            )
+          ] += swapAmounts[swapAmounts.length - 1];
         } else if (_swaps[i].inputType == InputType.SWAP_TOKENS_TO_EXACT_ETH) {
           IERC20(_swaps[i].path[0]).transferFrom(
             msg.sender,
@@ -118,7 +155,7 @@ contract SweepSwapFacet is OwnershipModifers {
             _swaps[i].router,
             _swaps[i].amountIn
           );
-          uint256[] memory swapAmounts = IUniswapV2Router02(_swaps[i].router)
+          swapAmounts = IUniswapV2Router02(_swaps[i].router)
             .swapTokensForExactETH(
               _swaps[i].amountOut,
               _swaps[i].amountIn,
@@ -127,7 +164,14 @@ contract SweepSwapFacet is OwnershipModifers {
               _swaps[i].deadline
             );
 
-          // refund extra input
+          amounts[
+            LibSweep._getTokenIndex(
+              _paymentTokens,
+              _swaps[_swaps.length - 1].path[
+                _swaps[_swaps.length - 1].path.length - 1
+              ]
+            )
+          ] += swapAmounts[swapAmounts.length - 1];
         } else if (
           _swaps[i].inputType == InputType.SWAP_TOKENS_TO_EXACT_TOKENS
         ) {
@@ -140,7 +184,7 @@ contract SweepSwapFacet is OwnershipModifers {
             _swaps[i].router,
             _swaps[i].amountIn
           );
-          uint256[] memory swapAmounts = IUniswapV2Router02(_swaps[i].router)
+          swapAmounts = IUniswapV2Router02(_swaps[i].router)
             .swapTokensForExactTokens(
               _swaps[i].amountOut,
               _swaps[i].amountIn,
@@ -149,12 +193,16 @@ contract SweepSwapFacet is OwnershipModifers {
               _swaps[i].deadline
             );
 
+          amounts[
+            LibSweep._getTokenIndex(
+              _paymentTokens,
+              _swaps[_swaps.length - 1].path[
+                _swaps[_swaps.length - 1].path.length - 1
+              ]
+            )
+          ] += swapAmounts[swapAmounts.length - 1];
           // refund extra input
         } else revert WrongInputType();
-
-        if (j == swapLength - 1) {
-          amounts[tokenInd] = _swaps[i].amountOut;
-        }
       }
     }
 
@@ -181,11 +229,11 @@ contract SweepSwapFacet is OwnershipModifers {
         ) {
           revert("Refund in input token is not supported");
         } else {
-          if (_paymentTokens[i] == address(0)) {
+          address paymentToken = _paymentTokens[i];
+          if (paymentToken == address(0)) {
             payable(msg.sender).transfer(refundAmount);
             emit LibSweep.RefundedToken(address(0), refundAmount);
           } else {
-            address paymentToken = _paymentTokens[0];
             IERC20(paymentToken).safeTransfer(msg.sender, refundAmount);
             emit LibSweep.RefundedToken(paymentToken, refundAmount);
           }

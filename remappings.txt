@@ -6,3 +6,4 @@
 @utils/=src/utils/
 @forge-std/=lib/forge-std/
 @ERC721A/=lib/ERC721A/
+@seaport/=lib/seaport/

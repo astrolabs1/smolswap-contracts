@@ -19,7 +19,7 @@ import "../../../stratos/ExchangeV5.sol";
 
 import "../../structs/BuyOrder.sol";
 
-import "@contracts/sweep/structs/Swap.sol";
+import "@contracts/sweep/structs/InputToken.sol";
 
 // import "@forge-std/src/console.sol";
 
