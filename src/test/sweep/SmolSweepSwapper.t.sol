@@ -28,6 +28,9 @@ import {SweepSwapFacet} from "@contracts/sweep/diamond/facets/sweep/SweepSwapFac
 import {LibSweep} from "@contracts/sweep/diamond/libraries/LibSweep.sol";
 import {LibMarketplaces} from "@contracts/sweep/diamond/libraries/LibMarketplaces.sol";
 
+import "@uniswap/v2-periphery/contracts/UniswapV2Router02.sol";
+import "@uniswap/v2-core/contracts/UniswapV2Factory.sol";
+
 contract MyScript is Test, IDiamondCut {
   SmolSweeper smolsweep;
   DiamondCutFacet dCutFacet;
@@ -40,22 +43,70 @@ contract MyScript is Test, IDiamondCut {
 
   IDiamondInit init;
 
-  function setUp() external {
+  UniswapV2Router02 uniswapRouter;
+  UniswapV2Router02 sushiswapRouter;
+
+  UniswapV2Factory uniswapFactory;
+  UniswapV2Factory sushiswapfactory;
+
+  TroveMarketplace public trove;
+  Magic public magic;
+  WETH9 public weth;
+  NFTERC721 public erc721;
+  NFTERC721 public erc721ETH;
+
+  NFTERC1155 public erc1155;
+
+  address public OWNER;
+  address public constant NOT_OWNER =
+    0x0000000000000000000000000000000000000001;
+  address public constant NEW_OWNER =
+    0x0000000000000000000000000000000000000002;
+  address public constant BUYER = 0x0000000000000000000000000000000000000003;
+  address[] public SELLERS = [
+    0x0000000000000000000000000000000000000004,
+    0x0000000000000000000000000000000000000005,
+    0x0000000000000000000000000000000000000006
+  ];
+
+  function setUp() public {
+    OWNER = address(this);
+
+    magic = new Magic();
+    weth = new WETH9();
+    erc721 = new NFTERC721();
+    erc721ETH = new NFTERC721();
+    erc1155 = new NFTERC1155();
+
+    trove = new TroveMarketplace();
+    trove.initialize(0, OWNER, magic);
+    trove.setWeth(address(weth));
+    trove.setTokenApprovalStatus(
+      address(erc721),
+      TroveMarketplace.TokenApprovalStatus.ERC_721_APPROVED,
+      address(magic)
+    );
+
+    trove.setTokenApprovalStatus(
+      address(erc721ETH),
+      TroveMarketplace.TokenApprovalStatus.ERC_721_APPROVED,
+      address(weth)
+    );
+
     //deploy facets
     dCutFacet = new DiamondCutFacet();
-    smolsweep = new SmolSweeper(
-      0x5Fc8A00e4141165BCb67419a7498959E4351cc94,
-      address(dCutFacet)
-    );
+    smolsweep = new SmolSweeper(address(this), address(dCutFacet));
     dLoupe = new DiamondLoupeFacet();
     ownerF = new OwnershipFacet();
+    sweepF = new SweepFacet();
     baseF = new BaseSweepFacet();
     marketF = new MarketplacesFacet();
-    sweepF = new SweepFacet();
-    sweepSwapF = new SweepSwapFacet();
+
+    init = new SmolSweepDiamondInit();
+    // init = new DiamondInit();
 
     //build cut struct
-    FacetCut[] memory cut = new FacetCut[](7);
+    FacetCut[] memory cut = new FacetCut[](6);
 
     cut[0] = (
       FacetCut({
@@ -75,13 +126,21 @@ contract MyScript is Test, IDiamondCut {
 
     cut[2] = (
       FacetCut({
+        facetAddress: address(sweepF),
+        action: FacetCutAction.Add,
+        functionSelectors: generateSelectors("SweepFacet")
+      })
+    );
+
+    cut[3] = (
+      FacetCut({
         facetAddress: address(baseF),
         action: FacetCutAction.Add,
         functionSelectors: generateSelectors("BaseSweepFacet")
       })
     );
 
-    cut[3] = (
+    cut[4] = (
       FacetCut({
         facetAddress: address(marketF),
         action: FacetCutAction.Add,
@@ -89,24 +148,7 @@ contract MyScript is Test, IDiamondCut {
       })
     );
 
-    cut[4] = (
-      FacetCut({
-        facetAddress: address(sweepF),
-        action: FacetCutAction.Add,
-        functionSelectors: generateSelectors("SweepFacet")
-      })
-    );
-
     cut[5] = (
-      FacetCut({
-        facetAddress: address(sweepSwapF),
-        action: FacetCutAction.Add,
-        functionSelectors: generateSelectors("SweepSwapFacet")
-      })
-    );
-
-    // add it's immutable function selectors
-    cut[6] = (
       FacetCut({
         facetAddress: address(smolsweep),
         action: FacetCutAction.Add,
@@ -115,10 +157,14 @@ contract MyScript is Test, IDiamondCut {
     );
 
     //upgrade diamond
-    IDiamondCut(address(smolsweep)).diamondCut(cut, address(init), "");
+    IDiamondCut(address(smolsweep)).diamondCut(
+      cut,
+      address(init),
+      abi.encodePacked(IDiamondInit.init.selector)
+    );
 
     address[] memory troveTokens = new address[](1);
-    troveTokens[0] = address(0xd1D7B842D04C43FDe2B91453E91d678506A0620B);
+    troveTokens[0] = address(magic);
     MarketplacesFacet(address(smolsweep)).addMarketplace(
       address(0x09986B4e255B3c548041a30A2Ee312Fe176731c2),
       // LibMarketplaces.TROVE_ID,
@@ -132,6 +178,24 @@ contract MyScript is Test, IDiamondCut {
       // LibMarketplaces.STRATOS_ID,
       // address(0xE5c7b4865D7f2B08FaAdF3F6d392E6D6Fa7B903C),
       stratosTokens
+    );
+
+    uniswapFactory = new UniswapV2Factory(OWNER);
+    sushiswapFactory = new UniswapV2Factory(OWNER);
+
+    uniswapRouter = new UniswapV2Router02(uniswapFactory, weth);
+    sushiswapRouter = new UniswapV2Router02(sushiswapFactory, weth);
+
+    uint256 liquidity = 1e18;
+    magic.mint(address(this), liquidity);
+    magic.approve(address(uniswapRouter), liquidity);
+    uniswapRouter.addLiquidityETH(
+      address(magic),
+      liquidity / 2,
+      liquidity / 2,
+      liquidity / 2,
+      address(OWNER),
+      block.timestamp + 1
     );
   }
 

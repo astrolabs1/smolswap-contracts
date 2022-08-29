@@ -9,8 +9,9 @@ remappings = [
     '@contracts/=src/contracts/',
     '@openzeppelin/=lib/openzeppelin-contracts/',
     '@forge-std/=lib/forge-std',
-    '@v2-core/=lib/v2-core/',
-    '@v2-periphery=lib/v2-periphery',
+    '@uniswap/v2-core/=lib/v2-core/',
+    '@uniswap/v2-periphery=lib/v2-periphery',
+    '@uniswap/lib/=lib/solidity-lib/',
     '@seaport/=lib/seaport/',
 ]
 ffi = true
@@ -32,9 +33,10 @@ remappings = [
     '@contracts/=src/contracts/',
     '@openzeppelin/=lib/openzeppelin-contracts/',
     '@forge-std/=lib/forge-std',
-    '@v2-core/=lib/v2-core/',
-    '@v2-periphery=lib/v2-periphery',
     '@ERC721A/=lib/ERC721A/',
+    '@uniswap/v2-core/=lib/v2-core/',
+    '@uniswap/v2-periphery=lib/v2-periphery',
+    '@uniswap/lib/=lib/solidity-lib/',
     '@seaport/=lib/seaport/',
 ]
 optimizer = false
