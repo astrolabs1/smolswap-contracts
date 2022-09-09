@@ -22,5 +22,6 @@ struct InputToken {
   uint256 amountOut;
   address router;
   address[] path;
+  uint16[] tokenIndexes;
   uint64 deadline;
 }

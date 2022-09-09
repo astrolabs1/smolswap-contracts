@@ -2,6 +2,8 @@
 pragma solidity ^0.8.14;
 
 import "../diamond/libraries/LibMarketplaces.sol";
+import "@contracts/treasure/interfaces/ITroveMarketplace.sol";
+import "@seaport/contracts/lib/ConsiderationStructs.sol";
 
 //           _____                    _____                   _______                   _____            _____                    _____                    _____                    _____
 //          /\    \                  /\    \                 /::\    \                 /\    \          /\    \                  /\    \                  /\    \                  /\    \
@@ -40,17 +42,13 @@ struct BuyOrder {
 }
 
 struct MultiTokenBuyOrder {
-  address assetAddress;
-  uint256 tokenId;
-  address payable seller;
-  uint256 quantity;
-  uint256 price;
-  uint256 createdAtBlockNumber;
-  uint64 startTime;
-  uint64 expiration;
+  BuyItemParams[] buyItemParamsOrders;
+  Order[] seaportOrders;
+  CriteriaResolver[] criteriaResolvers;
+  Fulfillment[] fulfillments;
   address marketplaceAddress;
   MarketplaceType marketplaceType;
-  bytes signature;
   address paymentToken;
+  uint16 tokenIndex;
   bool usingETH;
 }

@@ -18,19 +18,24 @@ import "../../../errors/BuyError.sol";
 
 import "../../../structs/BuyOrder.sol";
 
+import "@seaport/contracts/lib/ConsiderationStructs.sol";
+
+import "@seaport/contracts/interfaces/SeaportInterface.sol";
+
 // import "@forge-std/src/console.sol";
 
-contract SweepFacet is OwnershipModifers, ISmolSweeper {
+contract SweepFacet is
+  OwnershipModifers
+  // , ISmolSweeper
+{
   using SafeERC20 for IERC20;
 
-  function buyItemsMultiTokens(
+  function buyOrdersMultiTokens(
     MultiTokenBuyOrder[] calldata _buyOrders,
     uint16 _inputSettingsBitFlag,
     address[] calldata _paymentTokens,
     uint256[] calldata _maxSpendIncFees
   ) external payable {
-    // transfer payment tokens to this contract
-    // uint256 i = 0;
     uint256 length = _paymentTokens.length;
 
     for (uint256 i = 0; i < length; ++i) {
@@ -48,7 +53,7 @@ contract SweepFacet is OwnershipModifers, ISmolSweeper {
     }
 
     (uint256[] memory totalSpentAmount, uint256 successCount) = LibSweep
-      ._buyItemsMultiTokens(
+      ._buyOrdersMultiTokens(
         _buyOrders,
         _inputSettingsBitFlag,
         _paymentTokens,
@@ -71,6 +76,48 @@ contract SweepFacet is OwnershipModifers, ISmolSweeper {
           emit LibSweep.RefundedToken(_paymentTokens[i], refundAmount);
         }
       }
+    }
+  }
+
+  function matchOrdersSeaport(
+    Order[] calldata orders,
+    Fulfillment[] calldata fulfillments,
+    address _seaport
+  ) external payable {
+    Execution[] memory executions = SeaportInterface(_seaport).matchOrders{
+      value: LibSweep._calculateAmountWithoutFees(msg.value)
+    }(orders, fulfillments);
+
+    uint256 totalSpentAmount;
+
+    uint256 refundAmount = msg.value -
+      (totalSpentAmount + LibSweep._calculateFee(totalSpentAmount));
+
+    if (refundAmount > 0) {
+      payable(msg.sender).transfer(refundAmount);
+      emit LibSweep.RefundedToken(address(0), refundAmount);
+    }
+  }
+
+  function matchAdvancedOrders(
+    AdvancedOrder[] calldata orders,
+    CriteriaResolver[] calldata criteriaResolvers,
+    Fulfillment[] calldata fulfillments,
+    address _seaport
+  ) external payable {
+    Execution[] memory executions = SeaportInterface(_seaport)
+      .matchAdvancedOrders{
+      value: LibSweep._calculateAmountWithoutFees(msg.value)
+    }(orders, criteriaResolvers, fulfillments);
+
+    uint256 totalSpentAmount;
+
+    uint256 refundAmount = msg.value -
+      (totalSpentAmount + LibSweep._calculateFee(totalSpentAmount));
+
+    if (refundAmount > 0) {
+      payable(msg.sender).transfer(refundAmount);
+      emit LibSweep.RefundedToken(address(0), refundAmount);
     }
   }
 
