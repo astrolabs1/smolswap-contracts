@@ -28,21 +28,17 @@ import "@seaport/contracts/lib/ConsiderationStructs.sol";
 //          \/____/                  \/____/                                           \/____/          \/____/                  ~~                       \/____/
 
 struct BuyOrder {
-  address assetAddress;
-  uint256 tokenId;
-  address payable seller;
-  uint256 quantity;
-  uint256 price;
-  uint256 createdAtBlockNumber;
-  uint64 startTime;
-  uint64 expiration;
+  BuyItemParams buyItemParamsOrder;
+  Order[] seaportOrders;
+  CriteriaResolver[] criteriaResolvers;
+  Fulfillment[] fulfillments;
   address marketplaceAddress;
   MarketplaceType marketplaceType;
-  bytes signature;
+  address paymentToken;
 }
 
 struct MultiTokenBuyOrder {
-  BuyItemParams[] buyItemParamsOrders;
+  BuyItemParams buyItemParamsOrder;
   Order[] seaportOrders;
   CriteriaResolver[] criteriaResolvers;
   Fulfillment[] fulfillments;
@@ -50,5 +46,4 @@ struct MultiTokenBuyOrder {
   MarketplaceType marketplaceType;
   address paymentToken;
   uint16 tokenIndex;
-  bool usingETH;
 }

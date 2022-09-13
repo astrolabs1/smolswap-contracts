@@ -26,12 +26,13 @@ pragma solidity ^0.8.14;
 import "../../treasure/interfaces/ITroveMarketplace.sol";
 
 import "../structs/BuyOrder.sol";
+import "../structs/InputToken.sol";
 
-interface ISmolSweeper {
-  function buyOrdersMultiTokens(
+interface ISmolSweepSwapper {
+  function swapOrdersMultiTokens(
     MultiTokenBuyOrder[] calldata _buyOrders,
     uint16 _inputSettingsBitFlag,
     address[] calldata _paymentTokens,
-    uint256[] calldata _maxSpendIncFees
+    InputToken[][] calldata _swapsArrs
   ) external payable;
 }

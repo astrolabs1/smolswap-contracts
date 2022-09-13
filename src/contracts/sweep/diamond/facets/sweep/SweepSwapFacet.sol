@@ -29,7 +29,7 @@ contract SweepSwapFacet is OwnershipModifers {
   using SafeERC20 for IERC20;
   using SettingsBitFlag for uint16;
 
-  function buyOrdersMultiTokens(
+  function swapOrdersMultiTokens(
     MultiTokenBuyOrder[] calldata _buyOrders,
     uint16 _inputSettingsBitFlag,
     address[] calldata _paymentTokens,

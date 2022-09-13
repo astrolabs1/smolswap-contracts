@@ -1,6 +1,6 @@
 @openzeppelin/=lib/openzeppelin-contracts/
 @contracts/=src/contracts/
-@test/=src/tests/
+@test/=src/test/
 @v2-core/=lib/v2-core/
 @v2-periphery=lib/v2-periphery/
 @uniswap/v2-core/=lib/v2-core/
@@ -10,3 +10,4 @@
 @forge-std/=lib/forge-std/
 @ERC721A/=lib/ERC721A/
 @seaport/=lib/seaport/
+@solmate/=lib/solmate

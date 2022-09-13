@@ -24,10 +24,7 @@ import "@seaport/contracts/interfaces/SeaportInterface.sol";
 
 // import "@forge-std/src/console.sol";
 
-contract SweepFacet is
-  OwnershipModifers
-  // , ISmolSweeper
-{
+contract SweepFacet is OwnershipModifers, ISmolSweeper {
   using SafeERC20 for IERC20;
 
   function buyOrdersMultiTokens(
@@ -64,18 +61,21 @@ contract SweepFacet is
     if (successCount == 0) revert AllReverted();
 
     for (uint256 i = 0; i < length; ++i) {
-      uint256 refundAmount = _maxSpendIncFees[i] -
-        (totalSpentAmount[i] + LibSweep._calculateFee(totalSpentAmount[i]));
-
-      if (refundAmount > 0) {
-        if (_paymentTokens[i] == address(0)) {
-          payable(msg.sender).transfer(refundAmount);
-          emit LibSweep.RefundedToken(address(0), refundAmount);
-        } else {
-          IERC20(_paymentTokens[i]).safeTransfer(msg.sender, refundAmount);
-          emit LibSweep.RefundedToken(_paymentTokens[i], refundAmount);
+      uint256 totalIncFees = (totalSpentAmount[i] +
+        LibSweep._calculateFee(totalSpentAmount[i]));
+      if (totalIncFees < _maxSpendIncFees[i]) {
+        uint256 refundAmount = _maxSpendIncFees[i] - totalIncFees;
+        if (refundAmount > 0) {
+          if (_paymentTokens[i] == address(0)) {
+            payable(msg.sender).transfer(_maxSpendIncFees[i] - totalIncFees);
+          } else {
+            IERC20(_paymentTokens[i]).safeTransfer(
+              msg.sender,
+              _maxSpendIncFees[i] - totalIncFees
+            );
+          }
         }
-      }
+      } else revert NotEnoughPaymentToken(_paymentTokens[i], totalIncFees);
     }
   }
 

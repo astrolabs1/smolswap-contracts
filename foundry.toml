@@ -13,6 +13,8 @@ remappings = [
     '@uniswap/v2-periphery=lib/v2-periphery/',
     '@uniswap/lib/=lib/solidity-lib/',
     '@seaport/=lib/seaport/',
+    '@test/=src/test/',
+    '@solmate/=lib/solmate',
 ]
 ffi = true
 # optimizer = false
@@ -38,6 +40,8 @@ remappings = [
     '@uniswap/v2-periphery=lib/v2-periphery/',
     '@uniswap/lib/=lib/solidity-lib/',
     '@seaport/=lib/seaport/',
+    '@test/=src/test/',
+    '@solmate/=lib/solmate',
 ]
 optimizer = false
 optimizer_runs = 10

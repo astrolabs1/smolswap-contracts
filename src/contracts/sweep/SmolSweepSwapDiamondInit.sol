@@ -10,8 +10,9 @@ import {IDiamondInit} from "./diamond/interfaces/IDiamondInit.sol";
 import {LibDiamond} from "./diamond/libraries/LibDiamond.sol";
 
 import {ISmolSweeper} from "@contracts/sweep/interfaces/ISmolSweeper.sol";
+import {ISmolSweepSwapper} from "@contracts/sweep/interfaces/ISmolSweepSwapper.sol";
 
-contract SmolSweepDiamondInit is IDiamondInit {
+contract SmolSweepSwapDiamondInit is IDiamondInit {
   // You can add parameters to this function in order to pass in
   // data to set your own state variables
   function init() external {
@@ -32,5 +33,6 @@ contract SmolSweepDiamondInit is IDiamondInit {
     ds.supportedInterfaces[type(IERC721Receiver).interfaceId] = true;
 
     ds.supportedInterfaces[type(ISmolSweeper).interfaceId] = true;
+    ds.supportedInterfaces[type(ISmolSweepSwapper).interfaceId] = true;
   }
 }

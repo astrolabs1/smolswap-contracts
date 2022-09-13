@@ -8,6 +8,8 @@ pragma solidity ^0.8.0;
 * Implementation of a diamond.
 /******************************************************************************/
 
+// import "@forge-std/src/console.sol";
+
 import {LibDiamond} from "./libraries/LibDiamond.sol";
 import {LibOwnership} from "./libraries/LibOwnership.sol";
 import {IDiamondCut} from "./interfaces/IDiamondCut.sol";
